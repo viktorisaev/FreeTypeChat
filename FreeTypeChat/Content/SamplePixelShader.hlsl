@@ -1,12 +1,12 @@
-// Per-pixel color data passed through the pixel shader.
-struct PixelShaderInput
-{
-	float4 pos : SV_POSITION;
-	float3 color : COLOR0;
-};
+#include "Common.hlsli"
 
-// A pass-through function for the (interpolated) color data.
-float4 main(PixelShaderInput input) : SV_TARGET
+Texture2D texDiffuse : register(t0);
+SamplerState textureSampler : register(s0);
+
+
+float4 main(VertexToPixel input) : SV_TARGET
 {
-	return float4(input.color, 1.0f);
+	float4 diffuse = texDiffuse.Sample(textureSampler, input.uv);
+
+	return diffuse;
 }

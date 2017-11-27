@@ -22,8 +22,7 @@ Sample3DSceneRenderer::Sample3DSceneRenderer(const std::shared_ptr<DX::DeviceRes
 	m_loadingComplete(false),
 	m_radiansPerSecond(XM_PIDIV4),	// rotate 45 degrees per second
 	m_angle(0),
-	m_tracking(false),
-	m_mappedConstantBuffer(nullptr),
+//	m_mappedConstantBuffer(nullptr),
 	m_deviceResources(deviceResources)
 {
 	LoadState();
@@ -35,8 +34,8 @@ Sample3DSceneRenderer::Sample3DSceneRenderer(const std::shared_ptr<DX::DeviceRes
 
 Sample3DSceneRenderer::~Sample3DSceneRenderer()
 {
-	m_constantBuffer->Unmap(0, nullptr);
-	m_mappedConstantBuffer = nullptr;
+//	m_constantBuffer->Unmap(0, nullptr);
+//	m_mappedConstantBuffer = nullptr;
 }
 
 void Sample3DSceneRenderer::CreateDeviceDependentResources()
@@ -45,21 +44,41 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 
 	// Create a root signature with a single constant buffer slot.
 	{
-		//CD3DX12_DESCRIPTOR_RANGE range;
-		//CD3DX12_ROOT_PARAMETER parameter;
+		CD3DX12_DESCRIPTOR_RANGE range;
+		CD3DX12_ROOT_PARAMETER parameter;
 
-		//range.Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0);
-		//parameter.InitAsDescriptorTable(1, &range, D3D12_SHADER_VISIBILITY_VERTEX);
+		// texture
+		range.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
+		parameter.InitAsDescriptorTable(1, &range, D3D12_SHADER_VISIBILITY_PIXEL);
+
+		// sampler for the texture
+		D3D12_STATIC_SAMPLER_DESC samplerRing = {};
+		samplerRing.Filter = D3D12_FILTER_COMPARISON_MIN_LINEAR_MAG_MIP_POINT;//D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+		samplerRing.AddressU = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+		samplerRing.AddressV = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+		samplerRing.AddressW = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+		samplerRing.MipLODBias = 0;
+		samplerRing.MaxAnisotropy = 0;
+		samplerRing.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
+		samplerRing.BorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
+		samplerRing.MinLOD = 0.0f;
+		samplerRing.MaxLOD = D3D12_FLOAT32_MAX;
+		samplerRing.ShaderRegister = 0;															// SamplerState textureSampler : register(s0);
+		samplerRing.RegisterSpace = 0;
+		samplerRing.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+
+
 
 		D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags =
-			D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT | // Only the input assembler stage needs access to the constant buffer.
+			D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
+			D3D12_ROOT_SIGNATURE_FLAG_DENY_VERTEX_SHADER_ROOT_ACCESS |
 			D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
 			D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS |
-			D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
-			D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS;
+			D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS;
+		//|	D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS;	// allow pixel
 
 		CD3DX12_ROOT_SIGNATURE_DESC descRootSignature;
-		descRootSignature.Init(0, nullptr/*&parameter*/, 0, nullptr, rootSignatureFlags);
+		descRootSignature.Init(1, &parameter, 1, &samplerRing, rootSignatureFlags);
 
 		ComPtr<ID3DBlob> pSignature;
 		ComPtr<ID3DBlob> pError;
@@ -83,7 +102,7 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 		static const D3D12_INPUT_ELEMENT_DESC inputLayout[] =
 		{
 			{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-			{ "COLOR", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
 		};
 
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC state = {};
@@ -100,6 +119,17 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 		state.RTVFormats[0] = m_deviceResources->GetBackBufferFormat();
 		state.DSVFormat = m_deviceResources->GetDepthBufferFormat();
 		state.SampleDesc.Count = 1;
+
+		state.BlendState.AlphaToCoverageEnable = false;
+		state.BlendState.IndependentBlendEnable = false;
+		state.BlendState.RenderTarget[0].BlendEnable = true;
+		state.BlendState.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;
+		state.BlendState.RenderTarget[0].DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
+		state.BlendState.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
+		state.BlendState.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_ONE;
+		state.BlendState.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ZERO;
+		state.BlendState.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
+		state.BlendState.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
 
 		DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateGraphicsPipelineState(&state, IID_PPV_ARGS(&m_pipelineState)));
 
@@ -119,14 +149,10 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 		// Cube vertices. Each vertex has a position and a color.
 		VertexPositionColor cubeVertices[] =
 		{
-			{ XMFLOAT3(-1.0f,  1.0f,  0.0f), XMFLOAT3(1.0f, 0.0f, 0.0f) },
-			{ XMFLOAT3(-1.0f, -1.0f,  0.0f), XMFLOAT3(0.0f, 1.0f, 0.0f) },
-			{ XMFLOAT3( 0.0f,  1.0f,  0.0f), XMFLOAT3(1.0f, 1.0f, 1.0f) },
-			{ XMFLOAT3( 0.0f, -1.0f,  0.0f), XMFLOAT3(0.0f, 0.0f, 1.0f) },
-			//{ XMFLOAT3(0.5f, -0.5f, -0.5f), XMFLOAT3(1.0f, 0.0f, 0.0f) },
-			//{ XMFLOAT3(0.5f, -0.5f,  0.5f), XMFLOAT3(1.0f, 0.0f, 1.0f) },
-			//{ XMFLOAT3(0.5f,  0.5f, -0.5f), XMFLOAT3(1.0f, 1.0f, 0.0f) },
-			//{ XMFLOAT3(0.5f,  0.5f,  0.5f), XMFLOAT3(1.0f, 1.0f, 1.0f) },
+			{ XMFLOAT3( 0.0f,  1.0f,  0.0f), XMFLOAT2(0.0f, 0.0f) },
+			{ XMFLOAT3( 0.0f, -1.0f,  0.0f), XMFLOAT2(0.0f, 1.0f) },
+			{ XMFLOAT3( 1.0f,  1.0f,  0.0f), XMFLOAT2(1.0f, 0.0f) },
+			{ XMFLOAT3( 1.0f, -1.0f,  0.0f), XMFLOAT2(1.0f, 1.0f) },
 		};
 
 		const UINT vertexBufferSize = sizeof(cubeVertices);
@@ -177,21 +203,6 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 		{
 			0, 2, 1, // -x
 			1, 2, 3,
-
-			//4, 5, 6, // +x
-			//5, 7, 6,
-
-			//0, 1, 5, // -y
-			//0, 5, 4,
-
-			//2, 6, 7, // +y
-			//2, 7, 3,
-
-			//0, 4, 6, // -z
-			//0, 6, 2,
-
-			//1, 3, 7, // +z
-			//1, 7, 5,
 		};
 
 		const UINT indexBufferSize = sizeof(cubeIndices);
@@ -233,6 +244,8 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 			m_commandList->ResourceBarrier(1, &indexBufferResourceBarrier);
 		}
 
+
+
 		// Create a descriptor heap for the constant buffers.
 		{
 			D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
@@ -240,10 +253,12 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 			heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 			// This flag indicates that this descriptor heap can be bound to the pipeline and that descriptors contained in it can be referenced by a root table.
 			heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-			DX::ThrowIfFailed(d3dDevice->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&m_cbvHeap)));
+			DX::ThrowIfFailed(d3dDevice->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&m_texHeap)));
 
-            NAME_D3D12_OBJECT(m_cbvHeap);
+            NAME_D3D12_OBJECT(m_texHeap);
 		}
+
+		m_cbvDescriptorSize = d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
 		//CD3DX12_RESOURCE_DESC constantBufferDesc = CD3DX12_RESOURCE_DESC::Buffer(DX::c_frameCount * c_alignedConstantBufferSize);
 		//DX::ThrowIfFailed(d3dDevice->CreateCommittedResource(
@@ -258,8 +273,7 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 
 		//// Create constant buffer views to access the upload buffer.
 		//D3D12_GPU_VIRTUAL_ADDRESS cbvGpuAddress = m_constantBuffer->GetGPUVirtualAddress();
-		//CD3DX12_CPU_DESCRIPTOR_HANDLE cbvCpuHandle(m_cbvHeap->GetCPUDescriptorHandleForHeapStart());
-		//m_cbvDescriptorSize = d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		//CD3DX12_CPU_DESCRIPTOR_HANDLE cbvCpuHandle(m_texHeap->GetCPUDescriptorHandleForHeapStart());
 
 		//for (int n = 0; n < DX::c_frameCount; n++)
 		//{
@@ -278,6 +292,68 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 		//ZeroMemory(m_mappedConstantBuffer, DX::c_frameCount * c_alignedConstantBufferSize);
 		//// We don't unmap this until the app closes. Keeping things mapped for the lifetime of the resource is okay.
 
+
+
+		// texture
+		{
+			D3D12_RESOURCE_DESC desc = {};
+
+			desc.Width = static_cast<UINT>(128);
+			desc.Height = static_cast<UINT>(128);
+			desc.MipLevels = static_cast<UINT16>(1);
+			desc.DepthOrArraySize = static_cast<UINT16>(1);
+			desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+			desc.Flags = D3D12_RESOURCE_FLAG_NONE;
+			desc.SampleDesc.Count = 1;
+			desc.SampleDesc.Quality = 0;
+			desc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+
+			DX::ThrowIfFailed(d3dDevice->CreateCommittedResource(&defaultHeapProperties, D3D12_HEAP_FLAG_NONE, &desc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&m_Texture)));
+			NAME_D3D12_OBJECT(m_Texture);
+			const UINT64 uploadBufferSize = GetRequiredIntermediateSize(m_Texture.Get(), 0, 1);
+
+			DX::ThrowIfFailed(d3dDevice->CreateCommittedResource(&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD), D3D12_HEAP_FLAG_NONE, &CD3DX12_RESOURCE_DESC::Buffer(uploadBufferSize), D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(m_UploadHeap.GetAddressOf())));
+			NAME_D3D12_OBJECT(m_UploadHeap);
+
+			D3D12_SUBRESOURCE_DATA subData = {};
+			byte textur[128][128][4];
+
+			for (int i = 0, ei = 128; i < ei; ++i)
+			{
+				for (int j = 0, ej = 128; j < ej; ++j)
+				{
+					textur[i][j][0] = i * 3;
+					textur[i][j][1] = j * 3;
+					textur[i][j][2] = 0xFF;
+					textur[i][j][3] = (i % 4 == 0) ? 0xFF : (j % 2 == 0) ? 0x80 : 0x00;
+				}
+			}
+
+
+
+			subData.pData = textur;
+			subData.RowPitch = 4 * 128;
+			subData.SlicePitch = 128 * 128 * 4;
+
+			UpdateSubresources(m_commandList.Get(), m_Texture.Get(), m_UploadHeap.Get(), 0, 0, 1, &subData);
+			m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_Texture.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
+
+
+			D3D12_SHADER_RESOURCE_VIEW_DESC textureViewDesc = {};
+
+			textureViewDesc.Format = desc.Format;
+			textureViewDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+			textureViewDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+			textureViewDesc.Texture2D.MipLevels = 1;
+
+			CD3DX12_CPU_DESCRIPTOR_HANDLE cpuTextureHandle(m_texHeap->GetCPUDescriptorHandleForHeapStart(), 0, m_cbvDescriptorSize);	// texture
+			d3dDevice->CreateShaderResourceView(m_Texture.Get(), &textureViewDesc, cpuTextureHandle);
+		}
+
+
+
+
+
 		// Close the command list and execute it to begin the vertex/index buffer copy into the GPU's default heap.
 		DX::ThrowIfFailed(m_commandList->Close());
 		ID3D12CommandList* ppCommandLists[] = { m_commandList.Get() };
@@ -294,6 +370,8 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 
 		// Wait for the command list to finish executing; the vertex/index buffers need to be uploaded to the GPU before the upload resources go out of scope.
 		m_deviceResources->WaitForGpu();
+
+		m_UploadHeap.ReleaseAndGetAddressOf();
 	});
 
 	createAssetsTask.then([this]() {
@@ -353,13 +431,10 @@ void Sample3DSceneRenderer::Update(DX::StepTimer const& timer)
 {
 	if (m_loadingComplete)
 	{
-		if (!m_tracking)
-		{
-			// Rotate the cube a small amount.
-			m_angle += static_cast<float>(timer.GetElapsedSeconds()) * m_radiansPerSecond;
+		// Rotate the cube a small amount.
+		m_angle += static_cast<float>(timer.GetElapsedSeconds()) * m_radiansPerSecond;
 
-			Rotate(m_angle);
-		}
+		Rotate(m_angle);
 
 		// Update the constant buffer resource.
 		//UINT8* destination = m_mappedConstantBuffer + (m_deviceResources->GetCurrentFrameIndex() * c_alignedConstantBufferSize);
@@ -382,7 +457,6 @@ void Sample3DSceneRenderer::SaveState()
 	}
 
 	state->Insert(AngleKey, PropertyValue::CreateSingle(m_angle));
-	state->Insert(TrackingKey, PropertyValue::CreateBoolean(m_tracking));
 }
 
 // Restores the previous state of the renderer.
@@ -396,7 +470,6 @@ void Sample3DSceneRenderer::LoadState()
 	}
 	if (state->HasKey(TrackingKey))
 	{
-		m_tracking = safe_cast<IPropertyValue^>(state->Lookup(TrackingKey))->GetBoolean();
 		state->Remove(TrackingKey);
 	}
 }
@@ -426,12 +499,12 @@ bool Sample3DSceneRenderer::Render()
 	{
 		// Set the graphics root signature and descriptor heaps to be used by this frame.
 		m_commandList->SetGraphicsRootSignature(m_rootSignature.Get());
-		//ID3D12DescriptorHeap* ppHeaps[] = { m_cbvHeap.Get() };
-		//m_commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+		ID3D12DescriptorHeap* ppHeaps[] = { m_texHeap.Get() };
+		m_commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);	// HEAVYY!!!
 
-		//// Bind the current frame's constant buffer to the pipeline.
-		//CD3DX12_GPU_DESCRIPTOR_HANDLE gpuHandle(m_cbvHeap->GetGPUDescriptorHandleForHeapStart(), m_deviceResources->GetCurrentFrameIndex(), m_cbvDescriptorSize);
-		//m_commandList->SetGraphicsRootDescriptorTable(0, gpuHandle);
+		// Bind the current frame's constant buffer to the pipeline.
+		CD3DX12_GPU_DESCRIPTOR_HANDLE gpuHandle(m_texHeap->GetGPUDescriptorHandleForHeapStart(), 0/*m_deviceResources->GetCurrentFrameIndex()*/, m_cbvDescriptorSize);
+		m_commandList->SetGraphicsRootDescriptorTable(0, gpuHandle);
 
 		// Set the viewport and scissor rectangle.
 		D3D12_VIEWPORT viewport = m_deviceResources->GetScreenViewport();
@@ -446,7 +519,7 @@ bool Sample3DSceneRenderer::Render()
 		// Record drawing commands.
 		D3D12_CPU_DESCRIPTOR_HANDLE renderTargetView = m_deviceResources->GetRenderTargetView();
 		D3D12_CPU_DESCRIPTOR_HANDLE depthStencilView = m_deviceResources->GetDepthStencilView();
-		m_commandList->ClearRenderTargetView(renderTargetView, DirectX::Colors::CornflowerBlue, 0, nullptr);
+		m_commandList->ClearRenderTargetView(renderTargetView, DirectX::Colors::DarkSlateBlue, 0, nullptr);
 		m_commandList->ClearDepthStencilView(depthStencilView, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 
 		m_commandList->OMSetRenderTargets(1, &renderTargetView, false, &depthStencilView);
