@@ -153,6 +153,12 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 			{ XMFLOAT3( 0.0f, -1.0f,  0.0f), XMFLOAT2(0.0f, 1.0f) },
 			{ XMFLOAT3( 1.0f,  1.0f,  0.0f), XMFLOAT2(1.0f, 0.0f) },
 			{ XMFLOAT3( 1.0f, -1.0f,  0.0f), XMFLOAT2(1.0f, 1.0f) },
+
+			{ XMFLOAT3(-0.8f,  0.8f,  0.0f), XMFLOAT2(0.05f, 0.1f) },
+			{ XMFLOAT3(-0.8f,  0.3f,  0.0f), XMFLOAT2(0.05f, 0.18f) },
+			{ XMFLOAT3(-0.3f,  0.8f,  0.0f), XMFLOAT2(0.18f, 0.1f) },
+			{ XMFLOAT3(-0.3f,  0.3f,  0.0f), XMFLOAT2(0.18f, 0.18f) },
+
 		};
 
 		const UINT vertexBufferSize = sizeof(cubeVertices);
@@ -201,8 +207,11 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 		// first triangle of this mesh.
 		unsigned short cubeIndices[] =
 		{
-			0, 2, 1, // -x
+			0, 2, 1,
 			1, 2, 3,
+
+			4, 6, 5,
+			5, 6, 7,
 		};
 
 		const UINT indexBufferSize = sizeof(cubeIndices);
@@ -527,7 +536,7 @@ bool Sample3DSceneRenderer::Render()
 		m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		m_commandList->IASetVertexBuffers(0, 1, &m_vertexBufferView);
 		m_commandList->IASetIndexBuffer(&m_indexBufferView);
-		m_commandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
+		m_commandList->DrawIndexedInstanced(12, 1, 0, 0, 0);
 
 		// Indicate that the render target will now be used to present when the command list is done executing.
 		CD3DX12_RESOURCE_BARRIER presentResourceBarrier =
