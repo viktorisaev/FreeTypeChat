@@ -240,15 +240,7 @@ void DX::DeviceResources::CreateWindowSizeDependentResources()
 		swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
 
 		ComPtr<IDXGISwapChain1> swapChain;
-		DX::ThrowIfFailed(
-			m_dxgiFactory->CreateSwapChainForCoreWindow(
-				m_commandQueue.Get(),								// Swap chains need a reference to the command queue in DirectX 12.
-				reinterpret_cast<IUnknown*>(m_window.Get()),
-				&swapChainDesc,
-				nullptr,
-				&swapChain
-				)
-			);
+		DX::ThrowIfFailed(m_dxgiFactory->CreateSwapChainForCoreWindow(m_commandQueue.Get(),	reinterpret_cast<IUnknown*>(m_window.Get()), &swapChainDesc, nullptr, &swapChain));
 
 		DX::ThrowIfFailed(swapChain.As(&m_swapChain));
 	}
@@ -310,14 +302,7 @@ void DX::DeviceResources::CreateWindowSizeDependentResources()
 
 		CD3DX12_CLEAR_VALUE depthOptimizedClearValue(m_depthBufferFormat, 1.0f, 0);
 
-		ThrowIfFailed(m_d3dDevice->CreateCommittedResource(
-			&depthHeapProperties,
-			D3D12_HEAP_FLAG_NONE,
-			&depthResourceDesc,
-			D3D12_RESOURCE_STATE_DEPTH_WRITE,
-			&depthOptimizedClearValue,
-			IID_PPV_ARGS(&m_depthStencil)
-			));
+		ThrowIfFailed(m_d3dDevice->CreateCommittedResource(&depthHeapProperties, D3D12_HEAP_FLAG_NONE, &depthResourceDesc, D3D12_RESOURCE_STATE_DEPTH_WRITE, &depthOptimizedClearValue, IID_PPV_ARGS(&m_depthStencil)));
 
 		NAME_D3D12_OBJECT(m_depthStencil);
 

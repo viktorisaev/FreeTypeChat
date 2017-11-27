@@ -345,7 +345,6 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 			subData.SlicePitch = 128 * 128 * 4;
 
 			UpdateSubresources(m_commandList.Get(), m_Texture.Get(), m_UploadHeap.Get(), 0, 0, 1, &subData);
-			m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_Texture.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
 
 
 			D3D12_SHADER_RESOURCE_VIEW_DESC textureViewDesc = {};
@@ -357,6 +356,9 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 
 			CD3DX12_CPU_DESCRIPTOR_HANDLE cpuTextureHandle(m_texHeap->GetCPUDescriptorHandleForHeapStart(), 0, m_cbvDescriptorSize);	// texture
 			d3dDevice->CreateShaderResourceView(m_Texture.Get(), &textureViewDesc, cpuTextureHandle);
+
+//			m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_Texture.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));	// later, after texture update
+
 		}
 
 
@@ -380,7 +382,66 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 		// Wait for the command list to finish executing; the vertex/index buffers need to be uploaded to the GPU before the upload resources go out of scope.
 		m_deviceResources->WaitForGpu();
 
-		m_UploadHeap.ReleaseAndGetAddressOf();
+
+		// update texture
+
+		DX::ThrowIfFailed(m_commandList->Reset(m_deviceResources->GetCommandAllocator(), m_pipelineState.Get()));
+
+		{
+			D3D12_BOX box = {};
+			box.left = 8;
+			box.top = 13;
+			box.front = 0;
+
+			box.right = 40;
+			box.bottom = 40;
+			box.back = 1;
+
+
+			D3D12_TEXTURE_COPY_LOCATION copyLocation = {};
+			copyLocation.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+			copyLocation.SubresourceIndex = 0;
+			copyLocation.pResource = m_Texture.Get();
+
+			D3D12_TEXTURE_COPY_LOCATION srcLocation = {};
+			srcLocation.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+			srcLocation.PlacedFootprint.Footprint.Width = 128;
+			srcLocation.PlacedFootprint.Footprint.Height = 128;
+			srcLocation.PlacedFootprint.Footprint.Depth = 1;
+			srcLocation.PlacedFootprint.Footprint.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+			srcLocation.PlacedFootprint.Footprint.RowPitch = 128 * 4;
+			srcLocation.PlacedFootprint.Offset = 0;
+			srcLocation.pResource = m_UploadHeap.Get();
+
+			BYTE* pData;
+			DX::ThrowIfFailed(m_UploadHeap->Map(0, NULL, reinterpret_cast<void**>(&pData)));
+
+			// update upload
+			for (int i = 0, ei = 128; i < ei; ++i)
+			{
+				for (int j = 0, ej = 128; j < ej; ++j)
+				{
+					pData[(i * 128 + j) * 4 + 0] = 0xFF;
+					pData[(i * 128 + j) * 4 + 1] = 0xFF;
+					pData[(i * 128 + j) * 4 + 2] = 0xFF;
+					pData[(i * 128 + j) * 4 + 3] = (i*3+j*2)*23;
+				}
+			}
+
+			m_UploadHeap->Unmap(0, NULL);
+
+
+			m_commandList->CopyTextureRegion(&copyLocation, 20, 20, 0, &srcLocation, &box);
+		}
+
+		m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_Texture.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
+
+		DX::ThrowIfFailed(m_commandList->Close());
+		ppCommandLists[0] = m_commandList.Get();
+		m_deviceResources->GetCommandQueue()->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
+
+		m_deviceResources->WaitForGpu();
+
 	});
 
 	createAssetsTask.then([this]() {
@@ -528,7 +589,8 @@ bool Sample3DSceneRenderer::Render()
 		// Record drawing commands.
 		D3D12_CPU_DESCRIPTOR_HANDLE renderTargetView = m_deviceResources->GetRenderTargetView();
 		D3D12_CPU_DESCRIPTOR_HANDLE depthStencilView = m_deviceResources->GetDepthStencilView();
-		m_commandList->ClearRenderTargetView(renderTargetView, DirectX::Colors::DarkSlateBlue, 0, nullptr);
+//		m_commandList->ClearRenderTargetView(renderTargetView, DirectX::Colors::DarkSlateBlue, 0, nullptr);
+		m_commandList->ClearRenderTargetView(renderTargetView, m_deviceResources->GetCurrentFrameIndex() % DX::c_frameCount == 0 ? DirectX::Colors::Green : DirectX::Colors::Red, 0, nullptr);
 		m_commandList->ClearDepthStencilView(depthStencilView, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 
 		m_commandList->OMSetRenderTargets(1, &renderTargetView, false, &depthStencilView);
