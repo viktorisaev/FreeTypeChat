@@ -29,7 +29,7 @@ namespace FreeTypeChat
 
 	private:
 		// Constant buffers must be 256-byte aligned.
-		static const UINT c_alignedConstantBufferSize = (sizeof(ModelViewProjectionConstantBuffer) + 255) & ~255;
+//		static const UINT c_alignedConstantBufferSize = (sizeof(ModelViewProjectionConstantBuffer) + 255) & ~255;
 
 		// Cached pointer to device resources.
 		std::shared_ptr<DX::DeviceResources> m_deviceResources;
@@ -42,7 +42,7 @@ namespace FreeTypeChat
 		Microsoft::WRL::ComPtr<ID3D12Resource>				m_vertexBuffer;
 		Microsoft::WRL::ComPtr<ID3D12Resource>				m_indexBuffer;
 		Microsoft::WRL::ComPtr<ID3D12Resource>				m_constantBuffer;
-		ModelViewProjectionConstantBuffer					m_constantBufferData;
+//		ModelViewProjectionConstantBuffer					m_constantBufferData;
 		UINT8*												m_mappedConstantBuffer;
 		UINT												m_cbvDescriptorSize;
 		D3D12_RECT											m_scissorRect;

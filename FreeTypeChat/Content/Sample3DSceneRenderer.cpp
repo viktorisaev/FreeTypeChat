@@ -27,7 +27,7 @@ Sample3DSceneRenderer::Sample3DSceneRenderer(const std::shared_ptr<DX::DeviceRes
 	m_deviceResources(deviceResources)
 {
 	LoadState();
-	ZeroMemory(&m_constantBufferData, sizeof(m_constantBufferData));
+//	ZeroMemory(&m_constantBufferData, sizeof(m_constantBufferData));
 
 	CreateDeviceDependentResources();
 	CreateWindowSizeDependentResources();
@@ -45,11 +45,11 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 
 	// Create a root signature with a single constant buffer slot.
 	{
-		CD3DX12_DESCRIPTOR_RANGE range;
-		CD3DX12_ROOT_PARAMETER parameter;
+		//CD3DX12_DESCRIPTOR_RANGE range;
+		//CD3DX12_ROOT_PARAMETER parameter;
 
-		range.Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0);
-		parameter.InitAsDescriptorTable(1, &range, D3D12_SHADER_VISIBILITY_VERTEX);
+		//range.Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0);
+		//parameter.InitAsDescriptorTable(1, &range, D3D12_SHADER_VISIBILITY_VERTEX);
 
 		D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags =
 			D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT | // Only the input assembler stage needs access to the constant buffer.
@@ -59,7 +59,7 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 			D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS;
 
 		CD3DX12_ROOT_SIGNATURE_DESC descRootSignature;
-		descRootSignature.Init(1, &parameter, 0, nullptr, rootSignatureFlags);
+		descRootSignature.Init(0, nullptr/*&parameter*/, 0, nullptr, rootSignatureFlags);
 
 		ComPtr<ID3DBlob> pSignature;
 		ComPtr<ID3DBlob> pError;
@@ -119,14 +119,14 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 		// Cube vertices. Each vertex has a position and a color.
 		VertexPositionColor cubeVertices[] =
 		{
-			{ XMFLOAT3(-0.5f, -0.5f, -0.5f), XMFLOAT3(0.0f, 0.0f, 0.0f) },
-			{ XMFLOAT3(-0.5f, -0.5f,  0.5f), XMFLOAT3(0.0f, 0.0f, 1.0f) },
-			{ XMFLOAT3(-0.5f,  0.5f, -0.5f), XMFLOAT3(0.0f, 1.0f, 0.0f) },
-			{ XMFLOAT3(-0.5f,  0.5f,  0.5f), XMFLOAT3(0.0f, 1.0f, 1.0f) },
-			{ XMFLOAT3(0.5f, -0.5f, -0.5f), XMFLOAT3(1.0f, 0.0f, 0.0f) },
-			{ XMFLOAT3(0.5f, -0.5f,  0.5f), XMFLOAT3(1.0f, 0.0f, 1.0f) },
-			{ XMFLOAT3(0.5f,  0.5f, -0.5f), XMFLOAT3(1.0f, 1.0f, 0.0f) },
-			{ XMFLOAT3(0.5f,  0.5f,  0.5f), XMFLOAT3(1.0f, 1.0f, 1.0f) },
+			{ XMFLOAT3(-1.0f,  1.0f,  0.0f), XMFLOAT3(1.0f, 0.0f, 0.0f) },
+			{ XMFLOAT3(-1.0f, -1.0f,  0.0f), XMFLOAT3(0.0f, 1.0f, 0.0f) },
+			{ XMFLOAT3( 0.0f,  1.0f,  0.0f), XMFLOAT3(1.0f, 1.0f, 1.0f) },
+			{ XMFLOAT3( 0.0f, -1.0f,  0.0f), XMFLOAT3(0.0f, 0.0f, 1.0f) },
+			//{ XMFLOAT3(0.5f, -0.5f, -0.5f), XMFLOAT3(1.0f, 0.0f, 0.0f) },
+			//{ XMFLOAT3(0.5f, -0.5f,  0.5f), XMFLOAT3(1.0f, 0.0f, 1.0f) },
+			//{ XMFLOAT3(0.5f,  0.5f, -0.5f), XMFLOAT3(1.0f, 1.0f, 0.0f) },
+			//{ XMFLOAT3(0.5f,  0.5f,  0.5f), XMFLOAT3(1.0f, 1.0f, 1.0f) },
 		};
 
 		const UINT vertexBufferSize = sizeof(cubeVertices);
@@ -178,20 +178,20 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 			0, 2, 1, // -x
 			1, 2, 3,
 
-			4, 5, 6, // +x
-			5, 7, 6,
+			//4, 5, 6, // +x
+			//5, 7, 6,
 
-			0, 1, 5, // -y
-			0, 5, 4,
+			//0, 1, 5, // -y
+			//0, 5, 4,
 
-			2, 6, 7, // +y
-			2, 7, 3,
+			//2, 6, 7, // +y
+			//2, 7, 3,
 
-			0, 4, 6, // -z
-			0, 6, 2,
+			//0, 4, 6, // -z
+			//0, 6, 2,
 
-			1, 3, 7, // +z
-			1, 7, 5,
+			//1, 3, 7, // +z
+			//1, 7, 5,
 		};
 
 		const UINT indexBufferSize = sizeof(cubeIndices);
@@ -245,38 +245,38 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
             NAME_D3D12_OBJECT(m_cbvHeap);
 		}
 
-		CD3DX12_RESOURCE_DESC constantBufferDesc = CD3DX12_RESOURCE_DESC::Buffer(DX::c_frameCount * c_alignedConstantBufferSize);
-		DX::ThrowIfFailed(d3dDevice->CreateCommittedResource(
-			&uploadHeapProperties,
-			D3D12_HEAP_FLAG_NONE,
-			&constantBufferDesc,
-			D3D12_RESOURCE_STATE_GENERIC_READ,
-			nullptr,
-			IID_PPV_ARGS(&m_constantBuffer)));
+		//CD3DX12_RESOURCE_DESC constantBufferDesc = CD3DX12_RESOURCE_DESC::Buffer(DX::c_frameCount * c_alignedConstantBufferSize);
+		//DX::ThrowIfFailed(d3dDevice->CreateCommittedResource(
+		//	&uploadHeapProperties,
+		//	D3D12_HEAP_FLAG_NONE,
+		//	&constantBufferDesc,
+		//	D3D12_RESOURCE_STATE_GENERIC_READ,
+		//	nullptr,
+		//	IID_PPV_ARGS(&m_constantBuffer)));
 
-        NAME_D3D12_OBJECT(m_constantBuffer);
+  //      NAME_D3D12_OBJECT(m_constantBuffer);
 
-		// Create constant buffer views to access the upload buffer.
-		D3D12_GPU_VIRTUAL_ADDRESS cbvGpuAddress = m_constantBuffer->GetGPUVirtualAddress();
-		CD3DX12_CPU_DESCRIPTOR_HANDLE cbvCpuHandle(m_cbvHeap->GetCPUDescriptorHandleForHeapStart());
-		m_cbvDescriptorSize = d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		//// Create constant buffer views to access the upload buffer.
+		//D3D12_GPU_VIRTUAL_ADDRESS cbvGpuAddress = m_constantBuffer->GetGPUVirtualAddress();
+		//CD3DX12_CPU_DESCRIPTOR_HANDLE cbvCpuHandle(m_cbvHeap->GetCPUDescriptorHandleForHeapStart());
+		//m_cbvDescriptorSize = d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
-		for (int n = 0; n < DX::c_frameCount; n++)
-		{
-			D3D12_CONSTANT_BUFFER_VIEW_DESC desc;
-			desc.BufferLocation = cbvGpuAddress;
-			desc.SizeInBytes = c_alignedConstantBufferSize;
-			d3dDevice->CreateConstantBufferView(&desc, cbvCpuHandle);
+		//for (int n = 0; n < DX::c_frameCount; n++)
+		//{
+		//	D3D12_CONSTANT_BUFFER_VIEW_DESC desc;
+		//	desc.BufferLocation = cbvGpuAddress;
+		//	desc.SizeInBytes = c_alignedConstantBufferSize;
+		//	d3dDevice->CreateConstantBufferView(&desc, cbvCpuHandle);
 
-			cbvGpuAddress += desc.SizeInBytes;
-			cbvCpuHandle.Offset(m_cbvDescriptorSize);
-		}
+		//	cbvGpuAddress += desc.SizeInBytes;
+		//	cbvCpuHandle.Offset(m_cbvDescriptorSize);
+		//}
 
-		// Map the constant buffers.
-		CD3DX12_RANGE readRange(0, 0);		// We do not intend to read from this resource on the CPU.
-		DX::ThrowIfFailed(m_constantBuffer->Map(0, &readRange, reinterpret_cast<void**>(&m_mappedConstantBuffer)));
-		ZeroMemory(m_mappedConstantBuffer, DX::c_frameCount * c_alignedConstantBufferSize);
-		// We don't unmap this until the app closes. Keeping things mapped for the lifetime of the resource is okay.
+		//// Map the constant buffers.
+		//CD3DX12_RANGE readRange(0, 0);		// We do not intend to read from this resource on the CPU.
+		//DX::ThrowIfFailed(m_constantBuffer->Map(0, &readRange, reinterpret_cast<void**>(&m_mappedConstantBuffer)));
+		//ZeroMemory(m_mappedConstantBuffer, DX::c_frameCount * c_alignedConstantBufferSize);
+		//// We don't unmap this until the app closes. Keeping things mapped for the lifetime of the resource is okay.
 
 		// Close the command list and execute it to begin the vertex/index buffer copy into the GPU's default heap.
 		DX::ThrowIfFailed(m_commandList->Close());
@@ -324,28 +324,28 @@ void Sample3DSceneRenderer::CreateWindowSizeDependentResources()
 	// made to the swap chain render target. For draw calls to other targets,
 	// this transform should not be applied.
 
-	// This sample makes use of a right-handed coordinate system using row-major matrices.
-	XMMATRIX perspectiveMatrix = XMMatrixPerspectiveFovRH(
-		fovAngleY,
-		aspectRatio,
-		0.01f,
-		100.0f
-		);
+	//// This sample makes use of a right-handed coordinate system using row-major matrices.
+	//XMMATRIX perspectiveMatrix = XMMatrixPerspectiveFovRH(
+	//	fovAngleY,
+	//	aspectRatio,
+	//	0.01f,
+	//	100.0f
+	//	);
 
-	XMFLOAT4X4 orientation = m_deviceResources->GetOrientationTransform3D();
-	XMMATRIX orientationMatrix = XMLoadFloat4x4(&orientation);
+	//XMFLOAT4X4 orientation = m_deviceResources->GetOrientationTransform3D();
+	//XMMATRIX orientationMatrix = XMLoadFloat4x4(&orientation);
 
-	XMStoreFloat4x4(
-		&m_constantBufferData.projection,
-		XMMatrixTranspose(perspectiveMatrix * orientationMatrix)
-		);
+	//XMStoreFloat4x4(
+	//	&m_constantBufferData.projection,
+	//	XMMatrixTranspose(perspectiveMatrix * orientationMatrix)
+	//	);
 
-	// Eye is at (0,0.7,1.5), looking at point (0,-0.1,0) with the up-vector along the y-axis.
-	static const XMVECTORF32 eye = { 0.0f, 0.7f, 1.5f, 0.0f };
-	static const XMVECTORF32 at = { 0.0f, -0.1f, 0.0f, 0.0f };
-	static const XMVECTORF32 up = { 0.0f, 1.0f, 0.0f, 0.0f };
+	//// Eye is at (0,0.7,1.5), looking at point (0,-0.1,0) with the up-vector along the y-axis.
+	//static const XMVECTORF32 eye = { 0.0f, 0.7f, 1.5f, 0.0f };
+	//static const XMVECTORF32 at = { 0.0f, -0.1f, 0.0f, 0.0f };
+	//static const XMVECTORF32 up = { 0.0f, 1.0f, 0.0f, 0.0f };
 
-	XMStoreFloat4x4(&m_constantBufferData.view, XMMatrixTranspose(XMMatrixLookAtRH(eye, at, up)));
+	//XMStoreFloat4x4(&m_constantBufferData.view, XMMatrixTranspose(XMMatrixLookAtRH(eye, at, up)));
 }
 
 // Called once per frame, rotates the cube and calculates the model and view matrices.
@@ -362,8 +362,8 @@ void Sample3DSceneRenderer::Update(DX::StepTimer const& timer)
 		}
 
 		// Update the constant buffer resource.
-		UINT8* destination = m_mappedConstantBuffer + (m_deviceResources->GetCurrentFrameIndex() * c_alignedConstantBufferSize);
-		memcpy(destination, &m_constantBufferData, sizeof(m_constantBufferData));
+		//UINT8* destination = m_mappedConstantBuffer + (m_deviceResources->GetCurrentFrameIndex() * c_alignedConstantBufferSize);
+		//memcpy(destination, &m_constantBufferData, sizeof(m_constantBufferData));
 	}
 }
 
@@ -405,27 +405,7 @@ void Sample3DSceneRenderer::LoadState()
 void Sample3DSceneRenderer::Rotate(float radians)
 {
 	// Prepare to pass the updated model matrix to the shader.
-	XMStoreFloat4x4(&m_constantBufferData.model, XMMatrixTranspose(XMMatrixRotationY(radians)));
-}
-
-void Sample3DSceneRenderer::StartTracking()
-{
-	m_tracking = true;
-}
-
-// When tracking, the 3D cube can be rotated around its Y axis by tracking pointer position relative to the output screen width.
-void Sample3DSceneRenderer::TrackingUpdate(float positionX)
-{
-	if (m_tracking)
-	{
-		float radians = XM_2PI * 2.0f * positionX / m_deviceResources->GetOutputSize().Width;
-		Rotate(radians);
-	}
-}
-
-void Sample3DSceneRenderer::StopTracking()
-{
-	m_tracking = false;
+//	XMStoreFloat4x4(&m_constantBufferData.model, XMMatrixTranspose(XMMatrixRotationY(radians)));
 }
 
 // Renders one frame using the vertex and pixel shaders.
@@ -446,12 +426,12 @@ bool Sample3DSceneRenderer::Render()
 	{
 		// Set the graphics root signature and descriptor heaps to be used by this frame.
 		m_commandList->SetGraphicsRootSignature(m_rootSignature.Get());
-		ID3D12DescriptorHeap* ppHeaps[] = { m_cbvHeap.Get() };
-		m_commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+		//ID3D12DescriptorHeap* ppHeaps[] = { m_cbvHeap.Get() };
+		//m_commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
 
-		// Bind the current frame's constant buffer to the pipeline.
-		CD3DX12_GPU_DESCRIPTOR_HANDLE gpuHandle(m_cbvHeap->GetGPUDescriptorHandleForHeapStart(), m_deviceResources->GetCurrentFrameIndex(), m_cbvDescriptorSize);
-		m_commandList->SetGraphicsRootDescriptorTable(0, gpuHandle);
+		//// Bind the current frame's constant buffer to the pipeline.
+		//CD3DX12_GPU_DESCRIPTOR_HANDLE gpuHandle(m_cbvHeap->GetGPUDescriptorHandleForHeapStart(), m_deviceResources->GetCurrentFrameIndex(), m_cbvDescriptorSize);
+		//m_commandList->SetGraphicsRootDescriptorTable(0, gpuHandle);
 
 		// Set the viewport and scissor rectangle.
 		D3D12_VIEWPORT viewport = m_deviceResources->GetScreenViewport();
@@ -474,7 +454,7 @@ bool Sample3DSceneRenderer::Render()
 		m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		m_commandList->IASetVertexBuffers(0, 1, &m_vertexBufferView);
 		m_commandList->IASetIndexBuffer(&m_indexBufferView);
-		m_commandList->DrawIndexedInstanced(36, 1, 0, 0, 0);
+		m_commandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
 
 		// Indicate that the render target will now be used to present when the command list is done executing.
 		CD3DX12_RESOURCE_BARRIER presentResourceBarrier =
