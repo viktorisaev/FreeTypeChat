@@ -67,11 +67,17 @@
     <ClCompile Include="App.cpp" />
     <ClCompile Include="FreeTypeChatMain.cpp" />
     <ClCompile Include="pch.cpp" />
+    <ClCompile Include="ScreenGrid.cpp">
+      <Filter>Content</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App.h" />
     <ClInclude Include="FreeTypeChatMain.h" />
     <ClInclude Include="pch.h" />
+    <ClInclude Include="ScreenGrid.h">
+      <Filter>Content</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <AppxManifest Include="Package.appxmanifest" />
@@ -81,5 +87,13 @@
     <None Include="Content\Common.hlsli">
       <Filter>Content</Filter>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="Content\GridPixelShader.hlsl">
+      <Filter>Content</Filter>
+    </FxCompile>
+    <FxCompile Include="Content\GridVertexShader.hlsl">
+      <Filter>Content</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>

@@ -11,9 +11,14 @@ namespace FreeTypeChat
 	//};
 
 	// Used to send per-vertex data to the vertex shader.
-	struct VertexPositionColor
+	struct VertexPositionTexture
 	{
 		DirectX::XMFLOAT3 pos;
 		DirectX::XMFLOAT2 uv;
+	};
+
+	struct VertexPosition
+	{
+		DirectX::XMFLOAT3 pos;
 	};
 }

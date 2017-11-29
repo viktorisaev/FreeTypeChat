@@ -3,6 +3,7 @@
 #include "..\Common\DeviceResources.h"
 #include "ShaderStructures.h"
 #include "..\Common\StepTimer.h"
+#include "ScreenGrid.h"
 
 namespace FreeTypeChat
 {
@@ -52,10 +53,15 @@ namespace FreeTypeChat
 
 		Microsoft::WRL::ComPtr<ID3D12Resource>				m_UploadHeap;
 
+		Microsoft::WRL::ComPtr<ID3D12Resource>				m_GridVertexBuffer;
+		D3D12_VERTEX_BUFFER_VIEW							m_GridVertexBufferView;
+
 		// Variables used with the rendering loop.
 		bool	m_loadingComplete;
 		float	m_radiansPerSecond;
 		float	m_angle;
+
+		ScreenGrid m_ScreenGrid;
 	};
 }
 
