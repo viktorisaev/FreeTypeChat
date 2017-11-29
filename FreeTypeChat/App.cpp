@@ -57,25 +57,21 @@ void App::Initialize(CoreApplicationView^ applicationView)
 // Called when the CoreWindow object is created (or re-created).
 void App::SetWindow(CoreWindow^ window)
 {
-	window->SizeChanged += 
-		ref new TypedEventHandler<CoreWindow^, WindowSizeChangedEventArgs^>(this, &App::OnWindowSizeChanged);
+	window->SizeChanged += ref new TypedEventHandler<CoreWindow^, WindowSizeChangedEventArgs^>(this, &App::OnWindowSizeChanged);
 
-	window->VisibilityChanged +=
-		ref new TypedEventHandler<CoreWindow^, VisibilityChangedEventArgs^>(this, &App::OnVisibilityChanged);
+	window->VisibilityChanged += ref new TypedEventHandler<CoreWindow^, VisibilityChangedEventArgs^>(this, &App::OnVisibilityChanged);
 
-	window->Closed += 
-		ref new TypedEventHandler<CoreWindow^, CoreWindowEventArgs^>(this, &App::OnWindowClosed);
+	window->Closed += ref new TypedEventHandler<CoreWindow^, CoreWindowEventArgs^>(this, &App::OnWindowClosed);
+
+	window->KeyDown += ref new TypedEventHandler<CoreWindow^, KeyEventArgs^>(this, &App::OnKeyDown);
 
 	DisplayInformation^ currentDisplayInformation = DisplayInformation::GetForCurrentView();
 
-	currentDisplayInformation->DpiChanged +=
-		ref new TypedEventHandler<DisplayInformation^, Object^>(this, &App::OnDpiChanged);
+	currentDisplayInformation->DpiChanged += ref new TypedEventHandler<DisplayInformation^, Object^>(this, &App::OnDpiChanged);
 
-	currentDisplayInformation->OrientationChanged +=
-		ref new TypedEventHandler<DisplayInformation^, Object^>(this, &App::OnOrientationChanged);
+	currentDisplayInformation->OrientationChanged += ref new TypedEventHandler<DisplayInformation^, Object^>(this, &App::OnOrientationChanged);
 
-	DisplayInformation::DisplayContentsInvalidated +=
-		ref new TypedEventHandler<DisplayInformation^, Object^>(this, &App::OnDisplayContentsInvalidated);
+	DisplayInformation::DisplayContentsInvalidated += ref new TypedEventHandler<DisplayInformation^, Object^>(this, &App::OnDisplayContentsInvalidated);
 }
 
 // Initializes scene resources, or loads a previously saved app state.
@@ -99,7 +95,8 @@ void App::Run()
 			auto commandQueue = GetDeviceResources()->GetCommandQueue();
 			PIXBeginEvent(commandQueue, 0, L"Update");
 			{
-				m_main->Update();
+				m_main->Update(m_TypeRequest);
+				m_TypeRequest = false;
 			}
 			PIXEndEvent(commandQueue);
 
@@ -175,6 +172,14 @@ void App::OnWindowClosed(CoreWindow^ sender, CoreWindowEventArgs^ args)
 {
 	m_windowClosed = true;
 }
+
+
+void App::OnKeyDown(CoreWindow^ sender, KeyEventArgs^ args)
+{
+	m_TypeRequest = true;
+}
+
+
 
 // DisplayInformation event handlers.
 

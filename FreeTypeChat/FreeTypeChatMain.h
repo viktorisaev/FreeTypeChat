@@ -12,7 +12,7 @@ namespace FreeTypeChat
 	public:
 		FreeTypeChatMain();
 		void CreateRenderers(const std::shared_ptr<DX::DeviceResources>& deviceResources);
-		void Update();
+		void Update(bool _TypeRequest);
 		bool Render();
 
 		void OnWindowSizeChanged();

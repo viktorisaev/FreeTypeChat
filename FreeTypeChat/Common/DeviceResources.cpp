@@ -459,6 +459,7 @@ void DX::DeviceResources::Present()
 	}
 }
 
+
 // Wait for pending GPU work to complete.
 void DX::DeviceResources::WaitForGpu()
 {

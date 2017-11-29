@@ -14,8 +14,9 @@ namespace FreeTypeChat
 		Sample3DSceneRenderer(const std::shared_ptr<DX::DeviceResources>& deviceResources);
 		~Sample3DSceneRenderer();
 		void CreateDeviceDependentResources();
+		void UpdateTexture();
 		void CreateWindowSizeDependentResources();
-		void Update(DX::StepTimer const& timer);
+		void Update(DX::StepTimer const& timer, bool _TypeRequest);
 		bool Render();
 		void SaveState();
 
@@ -24,6 +25,11 @@ namespace FreeTypeChat
 		void Rotate(float radians);
 
 	private:
+
+		const int m_Width = 128;
+		const int m_Height = 128;
+
+
 		// Constant buffers must be 256-byte aligned.
 //		static const UINT c_alignedConstantBufferSize = (sizeof(ModelViewProjectionConstantBuffer) + 255) & ~255;
 

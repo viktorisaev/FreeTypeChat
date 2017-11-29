@@ -300,8 +300,8 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 		{
 			D3D12_RESOURCE_DESC desc = {};
 
-			desc.Width = static_cast<UINT>(128);
-			desc.Height = static_cast<UINT>(128);
+			desc.Width = static_cast<UINT>(m_Width);
+			desc.Height = static_cast<UINT>(m_Height);
 			desc.MipLevels = static_cast<UINT16>(1);
 			desc.DepthOrArraySize = static_cast<UINT16>(1);
 			desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -320,9 +320,9 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 			D3D12_SUBRESOURCE_DATA subData = {};
 			byte textur[128][128][4];
 
-			for (int i = 0, ei = 128; i < ei; ++i)
+			for (int i = 0, ei = m_Height; i < ei; ++i)
 			{
-				for (int j = 0, ej = 128; j < ej; ++j)
+				for (int j = 0, ej = m_Width; j < ej; ++j)
 				{
 					textur[i][j][0] = i * 3;
 					textur[i][j][1] = j * 3;
@@ -334,8 +334,8 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 
 
 			subData.pData = textur;
-			subData.RowPitch = 4 * 128;
-			subData.SlicePitch = 128 * 128 * 4;
+			subData.RowPitch = 4 * m_Width;
+			subData.SlicePitch = m_Height * subData.RowPitch;
 
 			UpdateSubresources(m_commandList.Get(), m_Texture.Get(), m_UploadHeap.Get(), 0, 0, 1, &subData);
 
@@ -378,64 +378,7 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 		m_deviceResources->WaitForGpu();
 
 
-		// update texture
-
-		DX::ThrowIfFailed(m_commandList->Reset(m_deviceResources->GetCommandAllocator(), m_pipelineState.Get()));
-
-		{
-			D3D12_BOX box = {};
-			box.left = 8;
-			box.top = 13;
-			box.front = 0;
-
-			box.right = 40;
-			box.bottom = 40;
-			box.back = 1;
-
-
-			D3D12_TEXTURE_COPY_LOCATION copyLocation = {};
-			copyLocation.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-			copyLocation.SubresourceIndex = 0;
-			copyLocation.pResource = m_Texture.Get();
-
-			D3D12_TEXTURE_COPY_LOCATION srcLocation = {};
-			srcLocation.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
-			srcLocation.PlacedFootprint.Footprint.Width = 128;
-			srcLocation.PlacedFootprint.Footprint.Height = 128;
-			srcLocation.PlacedFootprint.Footprint.Depth = 1;
-			srcLocation.PlacedFootprint.Footprint.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-			srcLocation.PlacedFootprint.Footprint.RowPitch = 128 * 4;
-			srcLocation.PlacedFootprint.Offset = 0;
-			srcLocation.pResource = m_UploadHeap.Get();
-
-			BYTE* pData;
-			DX::ThrowIfFailed(m_UploadHeap->Map(0, NULL, reinterpret_cast<void**>(&pData)));
-
-			// update upload
-			for (int i = 0, ei = 128; i < ei; ++i)
-			{
-				for (int j = 0, ej = 128; j < ej; ++j)
-				{
-					pData[(i * 128 + j) * 4 + 0] = 0xFF;
-					pData[(i * 128 + j) * 4 + 1] = 0xFF;
-					pData[(i * 128 + j) * 4 + 2] = 0xFF;
-					pData[(i * 128 + j) * 4 + 3] = (i*3+j*2)*23;
-				}
-			}
-
-			m_UploadHeap->Unmap(0, NULL);
-
-
-			m_commandList->CopyTextureRegion(&copyLocation, 20, 20, 0, &srcLocation, &box);
-		}
-
-		m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_Texture.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
-
-		DX::ThrowIfFailed(m_commandList->Close());
-		ppCommandLists[0] = m_commandList.Get();
-		m_deviceResources->GetCommandQueue()->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
-
-		m_deviceResources->WaitForGpu();
+		UpdateTexture();
 
 	});
 
@@ -443,6 +386,79 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 	createAssetsTask.then([this]() {
 		m_loadingComplete = true;
 	});
+}
+
+void FreeTypeChat::Sample3DSceneRenderer::UpdateTexture()
+{
+	int w = 20 + (rand() * 50) / (RAND_MAX + 1);
+	int h = 20 + (rand() * 50) / (RAND_MAX + 1);
+
+	int x = (rand() * (m_Width - w)) / (RAND_MAX + 1);
+	int y = (rand() * (m_Height - h)) / (RAND_MAX + 1);
+
+
+	// update texture
+	DX::ThrowIfFailed(m_commandList->Reset(m_deviceResources->GetCommandAllocator(), m_pipelineState.Get()));
+	{
+		D3D12_BOX box = {};
+		box.left = x;
+		box.top = y;
+		box.front = 0;
+
+		box.right = x + w;
+		box.bottom = y + h;
+		box.back = 1;
+
+
+		D3D12_TEXTURE_COPY_LOCATION copyLocation = {};
+		copyLocation.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+		copyLocation.SubresourceIndex = 0;
+		copyLocation.pResource = m_Texture.Get();
+
+		D3D12_TEXTURE_COPY_LOCATION srcLocation = {};
+		srcLocation.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+		srcLocation.PlacedFootprint.Footprint.Width = m_Width;
+		srcLocation.PlacedFootprint.Footprint.Height = m_Height;
+		srcLocation.PlacedFootprint.Footprint.Depth = 1;
+		srcLocation.PlacedFootprint.Footprint.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		srcLocation.PlacedFootprint.Footprint.RowPitch = srcLocation.PlacedFootprint.Footprint.Width * 4;
+		srcLocation.PlacedFootprint.Offset = 0;
+		srcLocation.pResource = m_UploadHeap.Get();
+
+		BYTE* pData;
+		DX::ThrowIfFailed(m_UploadHeap->Map(0, NULL, reinterpret_cast<void**>(&pData)));
+
+		byte valr = 10 + (rand() * (243)) / (RAND_MAX + 1);
+		byte valg = 10 + (rand() * (243)) / (RAND_MAX + 1);
+		byte valb = 10 + (rand() * (243)) / (RAND_MAX + 1);
+		byte mult = 0 + (rand() * (255)) / (RAND_MAX + 1);
+
+		// update upload
+		for (int i = 0, ei = m_Height; i < ei; ++i)
+		{
+			for (int j = 0, ej = m_Width; j < ej; ++j)
+			{
+				pData[(i * 128 + j) * 4 + 0] = valr;
+				pData[(i * 128 + j) * 4 + 1] = valg;
+				pData[(i * 128 + j) * 4 + 2] = valb;
+				pData[(i * 128 + j) * 4 + 3] = (i * 3 + j * 2) * mult;
+			}
+		}
+
+		m_UploadHeap->Unmap(0, NULL);
+
+
+		m_commandList->CopyTextureRegion(&copyLocation, x, y, 0, &srcLocation, &box);
+	}
+
+	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_Texture.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
+
+	DX::ThrowIfFailed(m_commandList->Close());
+	ID3D12CommandList* ppCommandLists[] = { m_commandList.Get() };
+	ppCommandLists[0] = m_commandList.Get();
+	m_deviceResources->GetCommandQueue()->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
+
+	m_deviceResources->WaitForGpu();
 }
 
 // Initializes view parameters when the window size changes.
@@ -493,7 +509,7 @@ void Sample3DSceneRenderer::CreateWindowSizeDependentResources()
 }
 
 // Called once per frame, rotates the cube and calculates the model and view matrices.
-void Sample3DSceneRenderer::Update(DX::StepTimer const& timer)
+void Sample3DSceneRenderer::Update(DX::StepTimer const& timer, bool _TypeRequest)
 {
 	if (m_loadingComplete)
 	{
@@ -505,6 +521,11 @@ void Sample3DSceneRenderer::Update(DX::StepTimer const& timer)
 		// Update the constant buffer resource.
 		//UINT8* destination = m_mappedConstantBuffer + (m_deviceResources->GetCurrentFrameIndex() * c_alignedConstantBufferSize);
 		//memcpy(destination, &m_constantBufferData, sizeof(m_constantBufferData));
+
+		if (_TypeRequest)
+		{
+			UpdateTexture();
+		}
 	}
 }
 

@@ -30,13 +30,13 @@ void FreeTypeChatMain::CreateRenderers(const std::shared_ptr<DX::DeviceResources
 }
 
 // Updates the application state once per frame.
-void FreeTypeChatMain::Update()
+void FreeTypeChatMain::Update(bool _TypeRequest)
 {
 	// Update scene objects.
 	m_timer.Tick([&]()
 	{
 		// TODO: Replace this with your app's content update functions.
-		m_sceneRenderer->Update(m_timer);
+		m_sceneRenderer->Update(m_timer, _TypeRequest);
 	});
 }
 
