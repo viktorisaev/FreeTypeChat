@@ -95,13 +95,6 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 		m_vertexShader = fileData;
 	});
 
-
-
-	// Load shaders asynchronously.
-	//auto createVSTask = DX::ReadDataAsync(L"SampleVertexShader.cso").then([this](std::vector<byte>& fileData) {
-	//	m_vertexShader = fileData;
-	//});
-
 	auto createPSTask = DX::ReadDataAsync(L"SamplePixelShader.cso").then([this](std::vector<byte>& fileData) {
 		m_pixelShader = fileData;
 	});
@@ -152,8 +145,12 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 
 	auto createGridTask = m_ScreenGrid.LoadGridResources(m_deviceResources);
 
+	auto createFreeTypeTask = m_FreeTypeRender.LoadFreeTypeResources();
+
+
+
 	// Create and upload cube geometry resources to the GPU.
-	auto createAssetsTask = (createPipelineStateTask && createGridTask).then([this]() {
+	auto createAssetsTask = (createPipelineStateTask && createGridTask && createFreeTypeTask).then([this]() {
 		auto d3dDevice = m_deviceResources->GetD3DDevice();
 
 		// Create a command list.
@@ -377,8 +374,11 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 		// Wait for the command list to finish executing; the vertex/index buffers need to be uploaded to the GPU before the upload resources go out of scope.
 		m_deviceResources->WaitForGpu();
 
+		m_FreeTypeRender.mmmmmmmmain();
+
 
 		UpdateTexture();
+
 
 	});
 
@@ -390,8 +390,8 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 
 void FreeTypeChat::Sample3DSceneRenderer::UpdateTexture()
 {
-	int w = 20 + (rand() * 50) / (RAND_MAX + 1);
-	int h = 20 + (rand() * 50) / (RAND_MAX + 1);
+	int w = 23;// 20 + (rand() * 50) / (RAND_MAX + 1);
+	int h = 29;// 20 + (rand() * 50) / (RAND_MAX + 1);
 
 	int x = (rand() * (m_Width - w)) / (RAND_MAX + 1);
 	int y = (rand() * (m_Height - h)) / (RAND_MAX + 1);
@@ -428,20 +428,33 @@ void FreeTypeChat::Sample3DSceneRenderer::UpdateTexture()
 		BYTE* pData;
 		DX::ThrowIfFailed(m_UploadHeap->Map(0, NULL, reinterpret_cast<void**>(&pData)));
 
+		byte *glyph = m_FreeTypeRender.GetBitmap();
+
 		byte valr = 10 + (rand() * (243)) / (RAND_MAX + 1);
 		byte valg = 10 + (rand() * (243)) / (RAND_MAX + 1);
 		byte valb = 10 + (rand() * (243)) / (RAND_MAX + 1);
 		byte mult = 0 + (rand() * (255)) / (RAND_MAX + 1);
 
 		// update upload
-		for (int i = 0, ei = m_Height; i < ei; ++i)
+		//for (int i = 0, ei = m_Height; i < ei; ++i)
+		//{
+		//	for (int j = 0, ej = m_Width; j < ej; ++j)
+		//	{
+		//		pData[(i * 128 + j) * 4 + 0] = valr;
+		//		pData[(i * 128 + j) * 4 + 1] = valg;
+		//		pData[(i * 128 + j) * 4 + 2] = valb;
+		//		pData[(i * 128 + j) * 4 + 3] = (i * 3 + j * 2) * mult;
+		//	}
+		//}
+
+		for (int i = 0, ei = h; i < ei; ++i)
 		{
-			for (int j = 0, ej = m_Width; j < ej; ++j)
+			for (int j = 0, ej = w; j < ej; ++j)
 			{
-				pData[(i * 128 + j) * 4 + 0] = valr;
-				pData[(i * 128 + j) * 4 + 1] = valg;
-				pData[(i * 128 + j) * 4 + 2] = valb;
-				pData[(i * 128 + j) * 4 + 3] = (i * 3 + j * 2) * mult;
+				pData[((y+i) * 128 + x+j) * 4 + 0] = valr;
+				pData[((y+i) * 128 + x+j) * 4 + 1] = valg;
+				pData[((y+i) * 128 + x+j) * 4 + 2] = valb;
+				pData[((y+i) * 128 + x+j) * 4 + 3] = glyph[i*w+j];
 			}
 		}
 

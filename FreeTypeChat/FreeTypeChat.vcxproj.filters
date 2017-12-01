@@ -62,6 +62,9 @@
     <Image Include="Assets\Wide310x150Logo.scale-200.png">
       <Filter>Assets</Filter>
     </Image>
+    <Filter Include="FreeType">
+      <UniqueIdentifier>{aa1ae6e1-64fa-4b12-b1ea-2d0adf0e47bd}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="App.cpp" />
@@ -70,6 +73,9 @@
     <ClCompile Include="ScreenGrid.cpp">
       <Filter>Content</Filter>
     </ClCompile>
+    <ClCompile Include="FreeTypeRender.cpp">
+      <Filter>FreeType</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App.h" />
@@ -77,6 +83,9 @@
     <ClInclude Include="pch.h" />
     <ClInclude Include="ScreenGrid.h">
       <Filter>Content</Filter>
+    </ClInclude>
+    <ClInclude Include="FreeTypeRender.h">
+      <Filter>FreeType</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -95,5 +104,8 @@
     <FxCompile Include="Content\GridVertexShader.hlsl">
       <Filter>Content</Filter>
     </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Font Include="arial.ttf" />
   </ItemGroup>
 </Project>

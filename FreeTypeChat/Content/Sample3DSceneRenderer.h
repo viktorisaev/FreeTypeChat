@@ -4,6 +4,7 @@
 #include "ShaderStructures.h"
 #include "..\Common\StepTimer.h"
 #include "ScreenGrid.h"
+#include "FreeTypeRender.h"
 
 namespace FreeTypeChat
 {
@@ -68,6 +69,8 @@ namespace FreeTypeChat
 		float	m_angle;
 
 		ScreenGrid m_ScreenGrid;
+
+		FreeTypeRender m_FreeTypeRender;
 	};
 }
 
