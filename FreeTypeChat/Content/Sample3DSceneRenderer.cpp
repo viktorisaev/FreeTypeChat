@@ -390,8 +390,11 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 
 void FreeTypeChat::Sample3DSceneRenderer::UpdateTexture()
 {
-	int w = 23;// 20 + (rand() * 50) / (RAND_MAX + 1);
-	int h = 29;// 20 + (rand() * 50) / (RAND_MAX + 1);
+
+	std::pair<int, int> bitmapSize = m_FreeTypeRender.GetBitmapSize();
+
+	int w = bitmapSize.first;// 20 + (rand() * 50) / (RAND_MAX + 1);
+	int h = bitmapSize.second;// 20 + (rand() * 50) / (RAND_MAX + 1);
 
 	int x = (rand() * (m_Width - w)) / (RAND_MAX + 1);
 	int y = (rand() * (m_Height - h)) / (RAND_MAX + 1);

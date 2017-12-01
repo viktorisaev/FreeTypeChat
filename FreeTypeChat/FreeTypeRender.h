@@ -37,6 +37,7 @@ public:
 	Concurrency::task<void> LoadFreeTypeResources();
 
 	byte* GetBitmap();
+	std::pair<int, int> GetBitmapSize();
 
 private:
 	int test_render(FT_Face face, void* user_data);

@@ -117,7 +117,6 @@ static FT_Error face_requester(FTC_FaceID  face_id,	FT_Library  library,	FT_Poin
 
 int FreeTypeRender::test_render(FT_Face face, void* user_data)
 {
-	unsigned int  i;
 	int           done = 0;
 
 	FT_UNUSED(user_data);
@@ -125,7 +124,7 @@ int FreeTypeRender::test_render(FT_Face face, void* user_data)
 	/* retrieve glyph index from character code */
 	//	FT_ULong charCode = 0x041C;
 //	FT_ULong charCode = 0x00BE;
-	FT_ULong charCode = 0x00C3;
+	FT_ULong charCode = 0x00A7;
 	FT_UInt glyph_index = FT_Get_Char_Index(face, charCode);
 
 	/* load glyph image into the slot (erase previous one) */
@@ -344,6 +343,12 @@ FT_Error FreeTypeRender::get_face(FT_Face*  face)
 byte* FreeTypeRender::GetBitmap()
 {
 	return face->glyph->bitmap.buffer;
+}
+
+
+std::pair<int, int> FreeTypeRender::GetBitmapSize()
+{
+	return std::make_pair(face->glyph->bitmap.width, face->glyph->bitmap.rows);
 }
 
 
