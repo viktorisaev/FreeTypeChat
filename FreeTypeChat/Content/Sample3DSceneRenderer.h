@@ -27,8 +27,8 @@ namespace FreeTypeChat
 
 	private:
 
-		const int m_Width = 128;
-		const int m_Height = 128;
+		const int m_Width = 512;
+		const int m_Height = 512;
 
 
 		// Constant buffers must be 256-byte aligned.

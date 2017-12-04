@@ -315,16 +315,16 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 			NAME_D3D12_OBJECT(m_UploadHeap);
 
 			D3D12_SUBRESOURCE_DATA subData = {};
-			byte textur[128][128][4];
+			byte *textur = new byte[m_Width * m_Height * 4];
 
 			for (int i = 0, ei = m_Height; i < ei; ++i)
 			{
 				for (int j = 0, ej = m_Width; j < ej; ++j)
 				{
-					textur[i][j][0] = i * 3;
-					textur[i][j][1] = j * 3;
-					textur[i][j][2] = 0xFF;
-					textur[i][j][3] = (i % 4 == 0) ? 0xFF : (j % 2 == 0) ? 0x80 : 0x00;
+					textur[(i * m_Width + j) * 4 + 0] = i * 3;
+					textur[(i * m_Width + j) * 4 + 1] = j * 3;
+					textur[(i * m_Width + j) * 4 + 2] = 0xFF;
+					textur[(i * m_Width + j) * 4 + 3] = (i % 4 == 0) ? 0xFF : (j % 2 == 0) ? 0x80 : 0x00;
 				}
 			}
 
@@ -357,6 +357,8 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 			m_indexBufferView.BufferLocation = m_indexBuffer->GetGPUVirtualAddress();
 			m_indexBufferView.SizeInBytes = sizeof(cubeIndices);
 			m_indexBufferView.Format = DXGI_FORMAT_R16_UINT;
+
+			delete[] textur;
 
 		}
 
@@ -438,26 +440,14 @@ void FreeTypeChat::Sample3DSceneRenderer::UpdateTexture()
 		byte valb = 10 + (rand() * (243)) / (RAND_MAX + 1);
 		byte mult = 0 + (rand() * (255)) / (RAND_MAX + 1);
 
-		// update upload
-		//for (int i = 0, ei = m_Height; i < ei; ++i)
-		//{
-		//	for (int j = 0, ej = m_Width; j < ej; ++j)
-		//	{
-		//		pData[(i * 128 + j) * 4 + 0] = valr;
-		//		pData[(i * 128 + j) * 4 + 1] = valg;
-		//		pData[(i * 128 + j) * 4 + 2] = valb;
-		//		pData[(i * 128 + j) * 4 + 3] = (i * 3 + j * 2) * mult;
-		//	}
-		//}
-
 		for (int i = 0, ei = h; i < ei; ++i)
 		{
 			for (int j = 0, ej = w; j < ej; ++j)
 			{
-				pData[((y+i) * 128 + x+j) * 4 + 0] = valr;
-				pData[((y+i) * 128 + x+j) * 4 + 1] = valg;
-				pData[((y+i) * 128 + x+j) * 4 + 2] = valb;
-				pData[((y+i) * 128 + x+j) * 4 + 3] = glyph[i*w+j];
+				pData[((y+i) * m_Width + x+j) * 4 + 0] = valr;
+				pData[((y+i) * m_Width + x+j) * 4 + 1] = valg;
+				pData[((y+i) * m_Width + x+j) * 4 + 2] = valb;
+				pData[((y+i) * m_Width + x+j) * 4 + 3] = glyph[i*w+j];
 			}
 		}
 
