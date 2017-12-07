@@ -460,19 +460,7 @@ void DX::DeviceResources::Present()
 }
 
 
-// Wait for pending GPU work to complete.
-void DX::DeviceResources::WaitForGpu()
-{
-	// Schedule a Signal command in the queue.
-	DX::ThrowIfFailed(m_commandQueue->Signal(m_fence.Get(), m_fenceValues[m_currentFrame]));
 
-	// Wait until the fence has been crossed.
-	DX::ThrowIfFailed(m_fence->SetEventOnCompletion(m_fenceValues[m_currentFrame], m_fenceEvent));
-	WaitForSingleObjectEx(m_fenceEvent, INFINITE, FALSE);
-
-	// Increment the fence value for the current frame.
-	m_fenceValues[m_currentFrame]++;
-}
 
 // Prepare to render the next frame.
 void DX::DeviceResources::MoveToNextFrame()
@@ -494,6 +482,27 @@ void DX::DeviceResources::MoveToNextFrame()
 	// Set the fence value for the next frame.
 	m_fenceValues[m_currentFrame] = currentFenceValue + 1;
 }
+
+
+
+
+// Wait for pending GPU work to complete.
+void DX::DeviceResources::WaitForGpu()
+{
+	// Schedule a Signal command in the queue.
+	DX::ThrowIfFailed(m_commandQueue->Signal(m_fence.Get(), m_fenceValues[m_currentFrame]));
+
+	// Wait until the fence has been crossed.
+	DX::ThrowIfFailed(m_fence->SetEventOnCompletion(m_fenceValues[m_currentFrame], m_fenceEvent));
+	WaitForSingleObjectEx(m_fenceEvent, INFINITE, FALSE);
+
+	// Increment the fence value for the current frame.
+	m_fenceValues[m_currentFrame]++;
+}
+
+
+
+
 
 // This method determines the rotation between the display device's native Orientation and the
 // current display orientation.
