@@ -15,6 +15,7 @@ std::mutex g_FreeTypeCacheMutex;
 std::vector<char> g_FreeTypeCacheVector;				// current characters cache (all used characters)
 
 std::mutex g_FreeTypeQueueMutex;
+std::condition_variable g_FreeTypeQueueConditionalVariable; 
 std::queue<char, std::deque<char>> g_FreeTypeQueue;		// current characters to be chached
 
 std::mutex g_OutputMutex;
@@ -22,28 +23,19 @@ std::vector<char> g_OutputVector;						// output characters
 
 
 
-void PresentState()
+void PresentStateInput()
 {
 	std::lock_guard<std::mutex> locker_present(g_PresentMutex);	// auto-unlock on block quit
 	std::lock_guard<std::mutex> locker_inputqueue(g_InputQueueMutex);	// auto-unlock on block quit
-	std::lock_guard<std::mutex> locker_freetypecache(g_FreeTypeCacheMutex);	// auto-unlock on block quit
-	std::lock_guard<std::mutex> locker_freetypequeue(g_FreeTypeQueueMutex);	// auto-unlock on block quit
 	std::lock_guard<std::mutex> locker_output(g_OutputMutex);	// auto-unlock on block quit
 
 	system("cls");
 
-	printf("FreeType queue (%i):\n", g_FreeTypeQueue.size());
-	for (auto it = g_FreeTypeQueue._Get_container().begin(); it != g_FreeTypeQueue._Get_container().end(); ++it)
-	{
-		printf(" %c", *it);
-	}
+
+	printf("\n");
 	printf("\n");
 
-	printf("FreeType cache (%i):\n", g_FreeTypeCacheVector.size());
-	for (auto it = g_FreeTypeCacheVector.begin(); it != g_FreeTypeCacheVector.end(); ++it)
-	{
-		printf(" %c", *it);
-	}
+	printf("\n");
 	printf("\n");
 
 	printf("Input queue (%i):\n", g_InputQueue.size());
@@ -63,6 +55,32 @@ void PresentState()
 
 
 
+void PresentStateFreeType()
+{
+	std::lock_guard<std::mutex> locker_present(g_PresentMutex);	// auto-unlock on block quit
+//	std::lock_guard<std::mutex> locker_freetypequeue(g_FreeTypeQueueMutex);	// auto-unlock on block quit
+	std::lock_guard<std::mutex> locker_freetypecache(g_FreeTypeCacheMutex);	// auto-unlock on block quit
+
+	system("cls");
+
+
+	printf("FreeType queue (%i):\n", g_FreeTypeQueue.size());
+	for (auto it = g_FreeTypeQueue._Get_container().begin(); it != g_FreeTypeQueue._Get_container().end(); ++it)
+	{
+		printf(" %c", *it);
+	}
+	printf("\n");
+
+	printf("FreeType cache (%i):\n", g_FreeTypeCacheVector.size());
+	for (auto it = g_FreeTypeCacheVector.begin(); it != g_FreeTypeCacheVector.end(); ++it)
+	{
+		printf(" %c", *it);
+	}
+	printf("\n");
+}
+
+
+
 
 Concurrency::task<void> CreateInputTask()
 {
@@ -75,6 +93,7 @@ Concurrency::task<void> CreateInputTask()
 			if (c == 27)
 			{
 				g_Quit = true;
+				g_FreeTypeQueueConditionalVariable.notify_all();
 			}
 			else
 			{
@@ -98,11 +117,14 @@ Concurrency::task<void> CreateInputTask()
 				if (!found)
 				{
 					// not in the cache, wait for to be cached
-					std::lock_guard<std::mutex> locker_freetypequeue(g_FreeTypeQueueMutex);	// auto-unlock on block quit
-					g_FreeTypeQueue.push(c);
+					{
+						std::lock_guard<std::mutex> locker_freetypequeue(g_FreeTypeQueueMutex);	// auto-unlock on block quit
+						g_FreeTypeQueue.push(c);
+					}
+					g_FreeTypeQueueConditionalVariable.notify_all();
 				}
 
-				PresentState();
+				PresentStateInput();
 			}
 
 		}
@@ -117,16 +139,20 @@ Concurrency::task<void> CreateFreeTypeTask()
 	{
 		while (!g_Quit)
 		{
-			if (g_FreeTypeQueue.size() > 0)
+			std::unique_lock<std::mutex> lk(g_FreeTypeQueueMutex);
+			g_FreeTypeQueueConditionalVariable.wait(lk, [] { return g_Quit || !g_FreeTypeQueue.empty(); });
+			lk.unlock();
+
+			while (g_FreeTypeQueue.size() > 0)
 			{
 				char c;
 				{
-					std::lock_guard<std::mutex> locker_freetypequeue(g_FreeTypeQueueMutex);	// auto-unlock on block quit
+//					std::lock_guard<std::mutex> locker_freetypequeue(g_FreeTypeQueueMutex);
 					c = g_FreeTypeQueue.front();
 					g_FreeTypeQueue.pop();
 				}
 
-				PresentState();
+				PresentStateFreeType();
 
 				bool needUpdate = false;
 				{
@@ -145,7 +171,7 @@ Concurrency::task<void> CreateFreeTypeTask()
 				if (needUpdate)
 				{
 					std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-					PresentState();
+					PresentStateFreeType();
 				}
 			}
 		}
@@ -166,7 +192,7 @@ Concurrency::task<void> CreateOutputTask()
 				bool needUpdate = false;
 				{
 					std::lock_guard<std::mutex> locker_inputqueue(g_InputQueueMutex);	// auto-unlock on block quit
-					c = g_InputQueue.front();
+					c = g_InputQueue.front();		// safe to pick the value (???)
 
 					if (c == 8)
 					{
@@ -206,7 +232,7 @@ Concurrency::task<void> CreateOutputTask()
 
 				if (needUpdate)
 				{
-					PresentState();
+					PresentStateInput();
 				}
 			}
 		}
@@ -217,7 +243,8 @@ Concurrency::task<void> CreateOutputTask()
 
 int main()
 {
-	PresentState();
+	PresentStateInput();
+	PresentStateFreeType();
 
 	auto inputTask = CreateInputTask();
 	auto freeTypeTask = CreateFreeTypeTask();
