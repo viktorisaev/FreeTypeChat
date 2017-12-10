@@ -79,6 +79,9 @@
     <ClCompile Include="Cursor.cpp">
       <Filter>Content</Filter>
     </ClCompile>
+    <ClCompile Include="TextField.cpp">
+      <Filter>Content</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App.h" />
@@ -91,6 +94,9 @@
       <Filter>FreeType</Filter>
     </ClInclude>
     <ClInclude Include="Cursor.h">
+      <Filter>Content</Filter>
+    </ClInclude>
+    <ClInclude Include="TextField.h">
       <Filter>Content</Filter>
     </ClInclude>
   </ItemGroup>

@@ -176,7 +176,16 @@ void App::OnWindowClosed(CoreWindow^ sender, CoreWindowEventArgs^ args)
 
 void App::OnKeyDown(CoreWindow^ sender, KeyEventArgs^ args)
 {
-	m_TypeRequest = true;
+	Windows::System::VirtualKey key = args->VirtualKey;
+
+	//if (
+	//	   (key != Windows::System::VirtualKey::Left)
+	//	&& (key != Windows::System::VirtualKey::Right)
+	//	)
+	{
+		m_TypeRequest = true;
+	}
+
 }
 
 

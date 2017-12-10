@@ -169,12 +169,6 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 			{ XMFLOAT3( 0.0f, -1.0f,  0.0f), XMFLOAT2(0.0f, 1.0f) },
 			{ XMFLOAT3( 1.0f,  1.0f,  0.0f), XMFLOAT2(1.0f, 0.0f) },
 			{ XMFLOAT3( 1.0f, -1.0f,  0.0f), XMFLOAT2(1.0f, 1.0f) },
-
-			{ XMFLOAT3(-0.8f,  0.8f,  0.0f), XMFLOAT2(0.05f, 0.1f) },
-			{ XMFLOAT3(-0.8f,  0.3f,  0.0f), XMFLOAT2(0.05f, 0.18f) },
-			{ XMFLOAT3(-0.3f,  0.8f,  0.0f), XMFLOAT2(0.18f, 0.1f) },
-			{ XMFLOAT3(-0.3f,  0.3f,  0.0f), XMFLOAT2(0.18f, 0.18f) },
-
 		};
 
 		const UINT vertexBufferSize = sizeof(cubeVertices);
@@ -212,9 +206,6 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 		{
 			0, 2, 1,
 			1, 2, 3,
-
-			4, 6, 5,
-			5, 6, 7,
 		};
 
 		const UINT indexBufferSize = sizeof(cubeIndices);
@@ -364,6 +355,8 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 		// cursor
 		m_Cursor.InitializeCursor(m_deviceResources, m_texHeap.Get(), m_commandList.Get(), DirectX::XMFLOAT2(0.01f, 0.15f), 0.5 );
 
+		// text field
+		m_TextField.InitializeTextfield(m_deviceResources);
 
 		// Close the command list and execute it to begin the vertex/index buffer copy into the GPU's default heap.
 		DX::ThrowIfFailed(m_commandList->Close());
@@ -378,6 +371,10 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 
 
 		UpdateTexture();
+
+
+
+		m_CaretPos = DirectX::XMFLOAT2(m_LeftTextfieldSide, 0.95f);
 
 
 	});
@@ -458,6 +455,7 @@ void FreeTypeChat::Sample3DSceneRenderer::UpdateTexture()
 
 		m_UploadHeap->Unmap(0, NULL);
 
+		m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_Texture.Get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_COPY_DEST));
 
 		m_commandList->CopyTextureRegion(&copyLocation, x, y, 0, &srcLocation, &box);
 	}
@@ -550,7 +548,37 @@ void Sample3DSceneRenderer::Update(DX::StepTimer const& timer, bool _TypeRequest
 			UpdateTexture();
 		}
 
-		m_Cursor.Update(timer.GetTotalSeconds(), false, DirectX::XMFLOAT2(-0.4f, -0.3f));
+		// type to textfield
+		if (_TypeRequest)
+		{
+			float w = 0.03f + ((rand() * 60) / (RAND_MAX + 1)) / 1000.0f;	// [0.1..0.15)
+			float h = 0.07f + ((rand() * 60) / (RAND_MAX + 1)) / 1000.0f;	// [0.1..0.12)
+
+			DirectX::XMFLOAT2 curPos = m_CaretPos;
+			m_CaretPos.x += (m_IntercharacterSpace + w);
+
+			if (m_CaretPos.x > 0)	// text field width reached, move to the next line
+			{
+				m_CaretPos.x = m_LeftTextfieldSide;
+				m_CaretPos.y -= m_CharacterRowHeight;
+
+				curPos = m_CaretPos;
+
+				m_CaretPos.x += (m_IntercharacterSpace + w);
+
+			}
+
+			Character c =
+			{
+				Rectangle(DirectX::XMFLOAT2(curPos.x, curPos.y), DirectX::XMFLOAT2(w, h)),
+				Rectangle(DirectX::XMFLOAT2(0.05f, ((rand() * 600) / (RAND_MAX + 1)) / 1000.0f), DirectX::XMFLOAT2(w, h))
+			};
+
+			m_TextField.AddCharacter(c);
+		}
+
+		m_Cursor.Update(timer.GetTotalSeconds(), _TypeRequest, DirectX::XMFLOAT2(m_CaretPos.x, m_CaretPos.y + 0.03f));
+
 	}
 }
 
@@ -663,15 +691,19 @@ bool Sample3DSceneRenderer::Render()
 		m_commandList->IASetVertexBuffers(0, 1, &m_vertexBufferView);
 
 		m_commandList->IASetIndexBuffer(&m_indexBufferView);
-		m_commandList->DrawIndexedInstanced(12, 1, 0, 0, 0);
+		m_commandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
 	}
 	PIXEndEvent(m_commandList.Get());	// cube
+
+	// text field. Reuse pipeline and texture
+	m_TextField.Render(m_commandList.Get());
 
 	// cursor
 	{
 		// heap is already setup
 		m_Cursor.Render(m_texHeap.Get(), m_commandList.Get());
 	}
+
 
 
 	// Indicate that the render target will now be used to present when the command list is done executing.
