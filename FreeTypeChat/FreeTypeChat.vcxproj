@@ -218,6 +218,7 @@
     <ClInclude Include="App.h" />
     <ClInclude Include="Common\d3dx12.h" />
     <ClInclude Include="Common\DeviceResources.h" />
+    <ClInclude Include="Cursor.h" />
     <ClInclude Include="FreeTypeChatMain.h" />
     <ClInclude Include="Common\DirectXHelper.h" />
     <ClInclude Include="Common\StepTimer.h" />
@@ -230,6 +231,7 @@
   <ItemGroup>
     <ClCompile Include="App.cpp" />
     <ClCompile Include="Common\DeviceResources.cpp" />
+    <ClCompile Include="Cursor.cpp" />
     <ClCompile Include="FreeTypeChatMain.cpp" />
     <ClCompile Include="Content\Sample3DSceneRenderer.cpp" />
     <ClCompile Include="FreeTypeRender.cpp">

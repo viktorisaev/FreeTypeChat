@@ -71,8 +71,6 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 		samplerRing.RegisterSpace = 0;
 		samplerRing.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
-
-
 		D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags =
 			D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
 			D3D12_ROOT_SIGNATURE_FLAG_DENY_VERTEX_SHADER_ROOT_ACCESS |
@@ -136,6 +134,9 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 		state.BlendState.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
 
 		DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateGraphicsPipelineState(&state, IID_PPV_ARGS(&m_pipelineState)));
+
+
+		m_Cursor.InitializeCursorPipelineState(m_deviceResources, state.VS, state.PS);
 
 		// Shader data can be deleted once the pipeline state is created.
 		m_vertexShader.clear();
@@ -204,8 +205,6 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 		}
 
 
-
-
 		// Load mesh indices. Each trio of indices represents a triangle to be rendered on the screen.
 		// For example: 0,2,1 means that the vertices with indexes 0, 2 and 1 from the vertex buffer compose the
 		// first triangle of this mesh.
@@ -245,10 +244,10 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 
 
 
-		// Create a descriptor heap for the constant buffers.
+		// Create a descriptor heap for the textures (ALL).
 		{
 			D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
-			heapDesc.NumDescriptors = DX::c_frameCount;
+			heapDesc.NumDescriptors = 2;	// texture #0=font, texture#1=cursor			// DX::c_frameCount;
 			heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 			// This flag indicates that this descriptor heap can be bound to the pipeline and that descriptors contained in it can be referenced by a root table.
 			heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
@@ -328,8 +327,6 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 				}
 			}
 
-
-
 			subData.pData = textur;
 			subData.RowPitch = 4 * m_Width;
 			subData.SlicePitch = m_Height * subData.RowPitch;
@@ -344,27 +341,28 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 			textureViewDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 			textureViewDesc.Texture2D.MipLevels = 1;
 
-			CD3DX12_CPU_DESCRIPTOR_HANDLE cpuTextureHandle(m_texHeap->GetCPUDescriptorHandleForHeapStart(), 0, m_cbvDescriptorSize);	// texture
+			CD3DX12_CPU_DESCRIPTOR_HANDLE cpuTextureHandle(m_texHeap->GetCPUDescriptorHandleForHeapStart(), 0, m_cbvDescriptorSize);	// texture #0
 			d3dDevice->CreateShaderResourceView(m_Texture.Get(), &textureViewDesc, cpuTextureHandle);
 
 //			m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_Texture.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));	// later, after texture update
 
-// Create vertex/index buffer views.
-			m_vertexBufferView.BufferLocation = m_vertexBuffer->GetGPUVirtualAddress();
-			m_vertexBufferView.StrideInBytes = sizeof(VertexPositionTexture);
-			m_vertexBufferView.SizeInBytes = sizeof(cubeVertices);
-
-			m_indexBufferView.BufferLocation = m_indexBuffer->GetGPUVirtualAddress();
-			m_indexBufferView.SizeInBytes = sizeof(cubeIndices);
-			m_indexBufferView.Format = DXGI_FORMAT_R16_UINT;
-
 			delete[] textur;
-
 		}
 
+		// Create vertex/index buffer views.
+		m_vertexBufferView.BufferLocation = m_vertexBuffer->GetGPUVirtualAddress();
+		m_vertexBufferView.StrideInBytes = sizeof(VertexPositionTexture);
+		m_vertexBufferView.SizeInBytes = sizeof(cubeVertices);
+
+		m_indexBufferView.BufferLocation = m_indexBuffer->GetGPUVirtualAddress();
+		m_indexBufferView.SizeInBytes = sizeof(cubeIndices);
+		m_indexBufferView.Format = DXGI_FORMAT_R16_UINT;
 
 		// init grid
 		m_ScreenGrid.InitializeGrid(m_deviceResources, m_commandList.Get(), N_GRID_VERT, N_GRID_HORZ);
+
+		// cursor
+		m_Cursor.InitializeCursor(m_deviceResources, m_texHeap.Get(), m_commandList.Get(), DirectX::XMFLOAT2(0.01f, 0.15f), 0.5 );
 
 
 		// Close the command list and execute it to begin the vertex/index buffer copy into the GPU's default heap.
@@ -389,6 +387,13 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 		m_loadingComplete = true;
 	});
 }
+
+
+
+
+
+
+
 
 void FreeTypeChat::Sample3DSceneRenderer::UpdateTexture()
 {
@@ -467,6 +472,11 @@ void FreeTypeChat::Sample3DSceneRenderer::UpdateTexture()
 	m_deviceResources->WaitForGpu();
 }
 
+
+
+
+
+
 // Initializes view parameters when the window size changes.
 void Sample3DSceneRenderer::CreateWindowSizeDependentResources()
 {
@@ -514,6 +524,13 @@ void Sample3DSceneRenderer::CreateWindowSizeDependentResources()
 	//XMStoreFloat4x4(&m_constantBufferData.view, XMMatrixTranspose(XMMatrixLookAtRH(eye, at, up)));
 }
 
+
+
+
+
+
+
+
 // Called once per frame, rotates the cube and calculates the model and view matrices.
 void Sample3DSceneRenderer::Update(DX::StepTimer const& timer, bool _TypeRequest)
 {
@@ -532,8 +549,17 @@ void Sample3DSceneRenderer::Update(DX::StepTimer const& timer, bool _TypeRequest
 		{
 			UpdateTexture();
 		}
+
+		m_Cursor.Update(timer.GetTotalSeconds(), false, DirectX::XMFLOAT2(-0.4f, -0.3f));
 	}
 }
+
+
+
+
+
+
+
 
 // Saves the current state of the renderer.
 void Sample3DSceneRenderer::SaveState()
@@ -573,6 +599,13 @@ void Sample3DSceneRenderer::Rotate(float radians)
 	// Prepare to pass the updated model matrix to the shader.
 //	XMStoreFloat4x4(&m_constantBufferData.model, XMMatrixTranspose(XMMatrixRotationY(radians)));
 }
+
+
+
+
+
+
+
 
 // Renders one frame using the vertex and pixel shaders.
 bool Sample3DSceneRenderer::Render()
@@ -622,7 +655,7 @@ bool Sample3DSceneRenderer::Render()
 		ID3D12DescriptorHeap* ppHeaps[] = { m_texHeap.Get() };
 		m_commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);	// HEAVYY!!!
 
-																		// Bind the current frame's constant buffer to the pipeline.
+		// texture
 		CD3DX12_GPU_DESCRIPTOR_HANDLE gpuHandle(m_texHeap->GetGPUDescriptorHandleForHeapStart(), 0/*m_deviceResources->GetCurrentFrameIndex()*/, m_cbvDescriptorSize);
 		m_commandList->SetGraphicsRootDescriptorTable(0, gpuHandle);
 
@@ -633,6 +666,12 @@ bool Sample3DSceneRenderer::Render()
 		m_commandList->DrawIndexedInstanced(12, 1, 0, 0, 0);
 	}
 	PIXEndEvent(m_commandList.Get());	// cube
+
+	// cursor
+	{
+		// heap is already setup
+		m_Cursor.Render(m_texHeap.Get(), m_commandList.Get());
+	}
 
 
 	// Indicate that the render target will now be used to present when the command list is done executing.

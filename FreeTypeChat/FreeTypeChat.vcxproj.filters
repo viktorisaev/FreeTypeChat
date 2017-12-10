@@ -76,6 +76,9 @@
     <ClCompile Include="FreeTypeRender.cpp">
       <Filter>FreeType</Filter>
     </ClCompile>
+    <ClCompile Include="Cursor.cpp">
+      <Filter>Content</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App.h" />
@@ -86,6 +89,9 @@
     </ClInclude>
     <ClInclude Include="FreeTypeRender.h">
       <Filter>FreeType</Filter>
+    </ClInclude>
+    <ClInclude Include="Cursor.h">
+      <Filter>Content</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

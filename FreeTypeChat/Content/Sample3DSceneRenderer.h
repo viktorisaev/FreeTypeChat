@@ -5,6 +5,7 @@
 #include "..\Common\StepTimer.h"
 #include "ScreenGrid.h"
 #include "FreeTypeRender.h"
+#include "Cursor.h"
 
 namespace FreeTypeChat
 {
@@ -41,7 +42,9 @@ namespace FreeTypeChat
 		Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList>	m_commandList;
 		Microsoft::WRL::ComPtr<ID3D12RootSignature>			m_rootSignature;
 		Microsoft::WRL::ComPtr<ID3D12PipelineState>			m_pipelineState;
-		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>		m_texHeap;
+
+		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>		m_texHeap;	// Main resource heap
+
 		Microsoft::WRL::ComPtr<ID3D12Resource>				m_vertexBuffer;
 		Microsoft::WRL::ComPtr<ID3D12Resource>				m_indexBuffer;
 
@@ -69,6 +72,8 @@ namespace FreeTypeChat
 		float	m_angle;
 
 		ScreenGrid m_ScreenGrid;
+
+		Cursor		m_Cursor;
 
 		FreeTypeRender m_FreeTypeRender;
 	};

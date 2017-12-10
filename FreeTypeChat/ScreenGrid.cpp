@@ -20,7 +20,7 @@ ScreenGrid::~ScreenGrid()
 }
 
 
-
+// loading resources requred async operations: load shaders from files of disk with "DX::ReadDataAsync". The rest could be done synchroneously
 Concurrency::task<void> ScreenGrid::LoadGridResources(std::shared_ptr<DX::DeviceResources> _DeviceResources)
 {
 	// Create a root signature with a single constant buffer slot.
@@ -101,7 +101,8 @@ Concurrency::task<void> ScreenGrid::LoadGridResources(std::shared_ptr<DX::Device
 
 
 
-void ScreenGrid::InitializeGrid(std::shared_ptr<DX::DeviceResources> _DeviceResources, ID3D12GraphicsCommandList *_ResourceCreationCommandList, const int _NumOfVert, const int _NumOfHor)
+// synchroneous creation of resources (including CommandList operations)
+void ScreenGrid::InitializeGrid(const std::shared_ptr<DX::DeviceResources>& _DeviceResources, ID3D12GraphicsCommandList *_ResourceCreationCommandList, const int _NumOfVert, const int _NumOfHor)
 {
 	m_NumOfVert = _NumOfVert;
 	m_NumOfHor = _NumOfHor;

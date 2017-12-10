@@ -18,7 +18,7 @@ public:
 	~ScreenGrid();
 
 	Concurrency::task<void> LoadGridResources(std::shared_ptr<DX::DeviceResources> _DeviceResources);
-	void InitializeGrid(std::shared_ptr<DX::DeviceResources> _DeviceResources, ID3D12GraphicsCommandList *_ResourceCreationCommandList, const int _NumOfVert, const int _NumOfHor);
+	void InitializeGrid(const std::shared_ptr<DX::DeviceResources>& _DeviceResources, ID3D12GraphicsCommandList *_ResourceCreationCommandList, const int _NumOfVert, const int _NumOfHor);
 
 	void Render(ID3D12GraphicsCommandList *_CommandList);
 
