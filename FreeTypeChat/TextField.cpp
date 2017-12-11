@@ -34,7 +34,7 @@ void TextField::InitializeTextfield(const std::shared_ptr<DX::DeviceResources>& 
 
 	// Vertices.
 
-	const UINT textfieldVerticesBufferSize = N_CHARS * 6 * sizeof(VertexPositionTexture);
+	const UINT textfieldVerticesBufferSize = N_CHARS * (4+2) * sizeof(VertexPositionTexture);
 
 	// Create the vertex buffer resource in the GPU's update heap. Initialized/Updated in "Update" method.
 	CD3DX12_RESOURCE_DESC textfieldVertexBufferDesc = CD3DX12_RESOURCE_DESC::Buffer(textfieldVerticesBufferSize);
@@ -137,12 +137,19 @@ void TextField::MapToVertices()
 		++vertices;
 		*vertices = { DirectX::XMFLOAT3(rect.m_Geom.m_Pos.x, dy, 0.0f), DirectX::XMFLOAT2(rect.m_Texture.m_Pos.x, rect.m_Texture.m_Pos.y + rect.m_Texture.m_Size.y) };
 		++vertices;
-		*vertices = { DirectX::XMFLOAT3(rect.m_Geom.m_Pos.x, dy, 0.0f), DirectX::XMFLOAT2(rect.m_Texture.m_Pos.x, rect.m_Texture.m_Pos.y + rect.m_Texture.m_Size.y) };
-		++vertices;
-		*vertices = { DirectX::XMFLOAT3(dx, rect.m_Geom.m_Pos.y, 0.0f), DirectX::XMFLOAT2(rect.m_Texture.m_Pos.x + rect.m_Texture.m_Size.x, rect.m_Texture.m_Pos.y) };
-		++vertices;
 		*vertices = { DirectX::XMFLOAT3(dx, dy, 0.0f), DirectX::XMFLOAT2(rect.m_Texture.m_Pos.x + rect.m_Texture.m_Size.x, rect.m_Texture.m_Pos.y + rect.m_Texture.m_Size.y) };
 		++vertices;
+
+		if (i < ei - 1)	// add gap like 2 empty triangles
+		{
+			// previous
+			*vertices = { DirectX::XMFLOAT3(dx, dy, 0.0f), DirectX::XMFLOAT2(rect.m_Texture.m_Pos.x + rect.m_Texture.m_Size.x, rect.m_Texture.m_Pos.y + rect.m_Texture.m_Size.y) };
+			++vertices;
+			// next
+			Character &rectNext = m_TextfieldRectangles[i+1];
+			*vertices = { DirectX::XMFLOAT3(rectNext.m_Geom.m_Pos.x, rectNext.m_Geom.m_Pos.y, 0.0f), DirectX::XMFLOAT2(rectNext.m_Texture.m_Pos.x, rectNext.m_Texture.m_Pos.y) };
+			++vertices;
+		}
 	}
 }
 
@@ -201,9 +208,10 @@ void TextField::Render(ID3D12GraphicsCommandList * _CommandList)
 
 //	_CommandList->SetGraphicsRootSignature(m_rootSignature.Get());
 
-	_CommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);		// TODO: use triangle list to simplify as strip doesn't work for separate characters (rects). Possible solution: geometry shader.
+	_CommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);		// TODO: use triangle strip with 2 degenerate triangles between characters. Possible improvement: geometry shader.
 	_CommandList->IASetVertexBuffers(0, 1, &m_TextfieldVertexBufferView);
-	_CommandList->DrawInstanced(GetNumberOfChars() * 6, 1, 0, 0);
+	UINT n = GetNumberOfChars();
+	_CommandList->DrawInstanced((n * 4) + (n > 0 ? (n-1)*2 : 0), 1, 0, 0);
 }
 
 
