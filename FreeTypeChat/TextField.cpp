@@ -88,9 +88,9 @@ void TextField::AddCharacter(UINT _Pos, Character _Char)
 
 void TextField::RePositionCharacters(UINT _StartPos)
 {
-	DirectX::XMFLOAT2 nextPos = m_BeginCaretPos;	// sart from top left
+	DirectX::XMFLOAT2 nextPos = _StartPos > 0 ? m_TextfieldRectangles[_StartPos-1].m_Geom.m_Pos : m_BeginCaretPos;	// start from top left
 
-	for (UINT i = 0, ei = GetNumberOfChars(); i < ei; ++i)
+	for (UINT i = _StartPos > 0 ? _StartPos-1 : 0, ei = GetNumberOfChars(); i < ei; ++i)
 	{
 		DirectX::XMFLOAT2 pos = nextPos;
 
