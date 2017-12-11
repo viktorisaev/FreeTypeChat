@@ -192,7 +192,7 @@ Concurrency::task<void> CreateOutputTask()
 				bool needUpdate = false;
 				{
 					std::lock_guard<std::mutex> locker_inputqueue(g_InputQueueMutex);	// auto-unlock on block quit
-					c = g_InputQueue.front();		// safe to pick the value (???)
+					c = g_InputQueue.front();		// safe to pick the value? NO!!!
 
 					if (c == 8)
 					{

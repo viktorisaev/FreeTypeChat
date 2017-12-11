@@ -64,6 +64,7 @@ void App::SetWindow(CoreWindow^ window)
 	window->Closed += ref new TypedEventHandler<CoreWindow^, CoreWindowEventArgs^>(this, &App::OnWindowClosed);
 
 	window->KeyDown += ref new TypedEventHandler<CoreWindow^, KeyEventArgs^>(this, &App::OnKeyDown);
+	window->CharacterReceived += ref new TypedEventHandler<CoreWindow^, CharacterReceivedEventArgs^>(this, &App::OnCharacterReceived);
 
 	DisplayInformation^ currentDisplayInformation = DisplayInformation::GetForCurrentView();
 
@@ -95,8 +96,7 @@ void App::Run()
 			auto commandQueue = GetDeviceResources()->GetCommandQueue();
 			PIXBeginEvent(commandQueue, 0, L"Update");
 			{
-				m_main->Update(m_TypeRequest);
-				m_TypeRequest = false;
+				m_main->Update();
 			}
 			PIXEndEvent(commandQueue);
 
@@ -178,15 +178,33 @@ void App::OnKeyDown(CoreWindow^ sender, KeyEventArgs^ args)
 {
 	Windows::System::VirtualKey key = args->VirtualKey;
 
-	//if (
-	//	   (key != Windows::System::VirtualKey::Left)
-	//	&& (key != Windows::System::VirtualKey::Right)
-	//	)
+	if (	// list of available non-character buttons
+		   (key == Windows::System::VirtualKey::Left)
+		|| (key == Windows::System::VirtualKey::Right)
+		|| (key == Windows::System::VirtualKey::Back)
+		)
 	{
-		m_TypeRequest = true;
+		m_main->AddKeyToQueue(KeyPressed(key, 0));
 	}
 
 }
+
+
+
+
+void App::OnCharacterReceived(CoreWindow^ sender, CharacterReceivedEventArgs^ args)
+{
+	UINT charCode = args->KeyCode;
+
+	if (charCode >= ' ')
+	{
+		m_main->AddKeyToQueue(KeyPressed(VirtualKey::None, charCode));
+	}
+
+}
+
+
+
 
 
 

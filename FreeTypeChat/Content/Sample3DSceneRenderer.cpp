@@ -529,8 +529,8 @@ void Sample3DSceneRenderer::CreateWindowSizeDependentResources()
 
 
 
-// Called once per frame, rotates the cube and calculates the model and view matrices.
-void Sample3DSceneRenderer::Update(DX::StepTimer const& timer, bool _TypeRequest)
+// Called once per frame.
+void Sample3DSceneRenderer::Update(DX::StepTimer const& timer)
 {
 	if (m_loadingComplete)
 	{
@@ -543,42 +543,49 @@ void Sample3DSceneRenderer::Update(DX::StepTimer const& timer, bool _TypeRequest
 		//UINT8* destination = m_mappedConstantBuffer + (m_deviceResources->GetCurrentFrameIndex() * c_alignedConstantBufferSize);
 		//memcpy(destination, &m_constantBufferData, sizeof(m_constantBufferData));
 
-		if (_TypeRequest)
-		{
-			UpdateTexture();
-		}
+		m_Cursor.Update(timer.GetTotalSeconds(), DirectX::XMFLOAT2(m_CaretPos.x, m_CaretPos.y + 0.03f));
+
+	}
+}
+
+
+
+
+
+
+
+// TODO: add char to output
+void Sample3DSceneRenderer::AddChar()
+{
+	if (m_loadingComplete)
+	{
+		UpdateTexture();
 
 		// type to textfield
-		if (_TypeRequest)
-		{
-			float w = 0.03f + ((rand() * 60) / (RAND_MAX + 1)) / 1000.0f;	// [0.1..0.15)
-			float h = 0.07f + ((rand() * 60) / (RAND_MAX + 1)) / 1000.0f;	// [0.1..0.12)
+		float w = 0.03f + ((rand() * 60) / (RAND_MAX + 1)) / 1000.0f;	// [0.1..0.15)
+		float h = 0.07f + ((rand() * 60) / (RAND_MAX + 1)) / 1000.0f;	// [0.1..0.12)
 
-			DirectX::XMFLOAT2 curPos = m_CaretPos;
+		DirectX::XMFLOAT2 curPos = m_CaretPos;
+		m_CaretPos.x += (m_IntercharacterSpace + w);
+
+		if (m_CaretPos.x > 0)	// text field width reached, move to the next line
+		{
+			m_CaretPos.x = m_LeftTextfieldSide;
+			m_CaretPos.y -= m_CharacterRowHeight;
+
+			curPos = m_CaretPos;
+
 			m_CaretPos.x += (m_IntercharacterSpace + w);
 
-			if (m_CaretPos.x > 0)	// text field width reached, move to the next line
-			{
-				m_CaretPos.x = m_LeftTextfieldSide;
-				m_CaretPos.y -= m_CharacterRowHeight;
-
-				curPos = m_CaretPos;
-
-				m_CaretPos.x += (m_IntercharacterSpace + w);
-
-			}
-
-			Character c =
-			{
-				Rectangle(DirectX::XMFLOAT2(curPos.x, curPos.y), DirectX::XMFLOAT2(w, h)),
-				Rectangle(DirectX::XMFLOAT2(0.05f, ((rand() * 600) / (RAND_MAX + 1)) / 1000.0f), DirectX::XMFLOAT2(w, h))
-			};
-
-			m_TextField.AddCharacter(c);
 		}
 
-		m_Cursor.Update(timer.GetTotalSeconds(), _TypeRequest, DirectX::XMFLOAT2(m_CaretPos.x, m_CaretPos.y + 0.03f));
+		Character c =
+		{
+			Rectangle(DirectX::XMFLOAT2(curPos.x, curPos.y), DirectX::XMFLOAT2(w, h)),
+			Rectangle(DirectX::XMFLOAT2(0.05f, ((rand() * 600) / (RAND_MAX + 1)) / 1000.0f), DirectX::XMFLOAT2(w, h))
+		};
 
+		m_TextField.AddCharacter(c);
 	}
 }
 

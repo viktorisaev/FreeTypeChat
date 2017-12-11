@@ -20,7 +20,8 @@ public:
 	void InitializeCursorPipelineState(std::shared_ptr<DX::DeviceResources> _DeviceResources, const D3D12_SHADER_BYTECODE &_VertexShader, const D3D12_SHADER_BYTECODE &_PixelShader);
 	void InitializeCursor(const std::shared_ptr<DX::DeviceResources>& _DeviceResources, ID3D12DescriptorHeap* _texHeap, ID3D12GraphicsCommandList *_ResourceCreationCommandList, DirectX::XMFLOAT2	_CursorNormalizedSize, double _BlinkPeriod);
 
-	void Update(double _CurrentTimestamp, bool _ResetBlink, DirectX::XMFLOAT2 _pos);	// set cursor to position
+	void Update(double _CurrentTimestamp, DirectX::XMFLOAT2 _pos);	// set cursor to position
+	void ResetBlink(double _CurrentTimestamp);
 
 	void Render(ID3D12DescriptorHeap* _texHeap, ID3D12GraphicsCommandList *_CommandList);
 

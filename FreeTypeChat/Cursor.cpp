@@ -207,26 +207,28 @@ void Cursor::InitializeCursor(const std::shared_ptr<DX::DeviceResources>& _Devic
 
 
 
-void Cursor::Update(double _CurrentTimestamp, bool _ResetBlink, DirectX::XMFLOAT2 _pos)
+void Cursor::Update(double _CurrentTimestamp, DirectX::XMFLOAT2 _pos)
 {
 	m_CursorVertices[0] = { XMFLOAT3(_pos.x , _pos.y, 0.0f), XMFLOAT2(0.0f, 0.0f) };
 	m_CursorVertices[1] = { XMFLOAT3(_pos.x + m_CursorNormalizedSize.x , _pos.y, 0.0f), XMFLOAT2(1.0f, 0.0f) };
 	m_CursorVertices[2] = { XMFLOAT3(_pos.x , _pos.y - m_CursorNormalizedSize.y, 0.0f), XMFLOAT2(0.0f, 1.0f) };
 	m_CursorVertices[3] = { XMFLOAT3(_pos.x + m_CursorNormalizedSize.x , _pos.y - m_CursorNormalizedSize.y, 0.0f), XMFLOAT2(1.0f, 1.0f) };
 
-	if (_ResetBlink)
+	if (_CurrentTimestamp - m_LastBlinkTimestamp > m_BlinkPeriod)	// _CurrentTimestamp always >= m_LastBlinkTimestamp
 	{
-		m_IsBlinkVisible = true;
+		m_IsBlinkVisible = !m_IsBlinkVisible;	// blink period expired, switch blinking
 		m_LastBlinkTimestamp = _CurrentTimestamp;
 	}
-	else
-	{
-		if (_CurrentTimestamp - m_LastBlinkTimestamp > m_BlinkPeriod)	// _CurrentTimestamp always >= m_LastBlinkTimestamp
-		{
-			m_IsBlinkVisible = !m_IsBlinkVisible;	// blink period expired, switch blinking
-			m_LastBlinkTimestamp = _CurrentTimestamp;
-		}
-	}
+}
+
+
+
+
+
+void Cursor::ResetBlink(double _CurrentTimestamp)
+{
+	m_IsBlinkVisible = true;
+	m_LastBlinkTimestamp = _CurrentTimestamp;
 }
 
 

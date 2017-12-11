@@ -30,13 +30,33 @@ void FreeTypeChatMain::CreateRenderers(const std::shared_ptr<DX::DeviceResources
 }
 
 // Updates the application state once per frame.
-void FreeTypeChatMain::Update(bool _TypeRequest)
+void FreeTypeChatMain::Update()
 {
 	// Update scene objects.
 	m_timer.Tick([&]()
 	{
-		// TODO: Replace this with your app's content update functions.
-		m_sceneRenderer->Update(m_timer, _TypeRequest);
+
+		// consume one input queue item
+		if (m_InputQueue.size() > 0)
+		{
+			std::lock_guard<std::mutex> locker_inputqueue(m_InputQueueMutex);	// auto-unlock on block quit
+			KeyPressed key = m_InputQueue.front();
+
+			if (key.m_VirtualKey == Windows::System::VirtualKey::None)
+			{
+				// character typed
+				m_InputQueue.pop();	// TODO: do not pop if not in cache
+				m_sceneRenderer->AddChar(/*TODO: charCode*/);
+				m_sceneRenderer->GetCursor().ResetBlink(m_timer.GetTotalSeconds());
+			}
+			else
+			{
+				// cursor movement
+				m_InputQueue.pop();
+			}
+		}
+
+		m_sceneRenderer->Update(m_timer);
 	});
 }
 
@@ -90,3 +110,12 @@ void FreeTypeChatMain::OnDeviceRemoved()
 	m_sceneRenderer->SaveState();
 	m_sceneRenderer = nullptr;
 }
+
+
+
+void FreeTypeChatMain::AddKeyToQueue(KeyPressed _key)
+{
+	std::lock_guard<std::mutex> locker_inputqueue(m_InputQueueMutex);	// auto-unlock on block quit
+	m_InputQueue.push(_key);
+}
+

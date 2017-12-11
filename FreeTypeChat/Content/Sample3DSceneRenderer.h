@@ -19,9 +19,12 @@ namespace FreeTypeChat
 		void CreateDeviceDependentResources();
 		void UpdateTexture();
 		void CreateWindowSizeDependentResources();
-		void Update(DX::StepTimer const& timer, bool _TypeRequest);
+		void Update(DX::StepTimer const& timer);
+		void AddChar();
 		bool Render();
 		void SaveState();
+
+		Cursor&	GetCursor() { return m_Cursor; }
 
 	private:
 		void LoadState();

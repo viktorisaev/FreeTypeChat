@@ -30,6 +30,7 @@ namespace FreeTypeChat
 		void OnVisibilityChanged(Windows::UI::Core::CoreWindow^ sender, Windows::UI::Core::VisibilityChangedEventArgs^ args);
 		void OnWindowClosed(Windows::UI::Core::CoreWindow^ sender, Windows::UI::Core::CoreWindowEventArgs^ args);
 		void OnKeyDown(Windows::UI::Core::CoreWindow^ sender, Windows::UI::Core::KeyEventArgs^ args);
+		void OnCharacterReceived(Windows::UI::Core::CoreWindow^ sender, Windows::UI::Core::CharacterReceivedEventArgs^ args);
 
 		// DisplayInformation event handlers.
 		void OnDpiChanged(Windows::Graphics::Display::DisplayInformation^ sender, Platform::Object^ args);
@@ -44,10 +45,14 @@ namespace FreeTypeChat
 		std::unique_ptr<FreeTypeChatMain> m_main;
 		bool m_windowClosed;
 		bool m_windowVisible;
-
-		bool m_TypeRequest;
 	};
 }
+
+
+
+
+
+
 
 ref class Direct3DApplicationSource sealed : Windows::ApplicationModel::Core::IFrameworkViewSource
 {
