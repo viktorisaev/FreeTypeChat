@@ -353,7 +353,7 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 		m_ScreenGrid.InitializeGrid(m_deviceResources, m_commandList.Get(), N_GRID_VERT, N_GRID_HORZ);
 
 		// cursor
-		m_Cursor.InitializeCursor(m_deviceResources, m_texHeap.Get(), m_commandList.Get(), DirectX::XMFLOAT2(0.01f, 0.15f), 0.5 );
+		m_Cursor.InitializeCursor(m_deviceResources, m_texHeap.Get(), m_commandList.Get(), DirectX::XMFLOAT2(0.007f, 0.15f), 0.5 );
 
 		// text field
 		m_TextField.InitializeTextfield(m_deviceResources);
@@ -371,12 +371,6 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 
 
 		UpdateTexture();
-
-
-
-		m_CaretPos = DirectX::XMFLOAT2(m_LeftTextfieldSide, 0.95f);
-
-
 	});
 
 
@@ -542,9 +536,6 @@ void Sample3DSceneRenderer::Update(DX::StepTimer const& timer)
 		// Update the constant buffer resource.
 		//UINT8* destination = m_mappedConstantBuffer + (m_deviceResources->GetCurrentFrameIndex() * c_alignedConstantBufferSize);
 		//memcpy(destination, &m_constantBufferData, sizeof(m_constantBufferData));
-
-		m_Cursor.Update(timer.GetTotalSeconds(), DirectX::XMFLOAT2(m_CaretPos.x, m_CaretPos.y + 0.03f));
-
 	}
 }
 
@@ -560,32 +551,6 @@ void Sample3DSceneRenderer::AddChar()
 	if (m_loadingComplete)
 	{
 		UpdateTexture();
-
-		// type to textfield
-		float w = 0.03f + ((rand() * 60) / (RAND_MAX + 1)) / 1000.0f;	// [0.1..0.15)
-		float h = 0.07f + ((rand() * 60) / (RAND_MAX + 1)) / 1000.0f;	// [0.1..0.12)
-
-		DirectX::XMFLOAT2 curPos = m_CaretPos;
-		m_CaretPos.x += (m_IntercharacterSpace + w);
-
-		if (m_CaretPos.x > 0)	// text field width reached, move to the next line
-		{
-			m_CaretPos.x = m_LeftTextfieldSide;
-			m_CaretPos.y -= m_CharacterRowHeight;
-
-			curPos = m_CaretPos;
-
-			m_CaretPos.x += (m_IntercharacterSpace + w);
-
-		}
-
-		Character c =
-		{
-			Rectangle(DirectX::XMFLOAT2(curPos.x, curPos.y), DirectX::XMFLOAT2(w, h)),
-			Rectangle(DirectX::XMFLOAT2(0.05f, ((rand() * 600) / (RAND_MAX + 1)) / 1000.0f), DirectX::XMFLOAT2(w, h))
-		};
-
-		m_TextField.AddCharacter(c);
 	}
 }
 

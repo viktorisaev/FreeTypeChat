@@ -57,5 +57,6 @@ namespace FreeTypeChat
 		std::mutex m_InputQueueMutex;
 		std::queue<KeyPressed, std::deque<KeyPressed>> m_InputQueue;		// typed characters to be processed
 
+		UINT	m_CursorIndex;	// 0-based index of the cursor position in the input string
 	};
 }

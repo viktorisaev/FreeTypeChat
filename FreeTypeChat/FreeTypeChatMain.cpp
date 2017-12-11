@@ -10,7 +10,8 @@ using namespace Concurrency;
 // The DirectX 12 Application template is documented at https://go.microsoft.com/fwlink/?LinkID=613670&clcid=0x409
 
 // Loads and initializes application assets when the application is loaded.
-FreeTypeChatMain::FreeTypeChatMain()
+FreeTypeChatMain::FreeTypeChatMain() :
+	m_CursorIndex(0)
 {
 	// TODO: Change the timer settings if you want something other than the default variable timestep mode.
 	// e.g. for 60 FPS fixed timestep update logic, call:
@@ -32,10 +33,16 @@ void FreeTypeChatMain::CreateRenderers(const std::shared_ptr<DX::DeviceResources
 // Updates the application state once per frame.
 void FreeTypeChatMain::Update()
 {
+	if (!m_sceneRenderer->IsLoadingComplete())
+	{
+		return;
+	}
+
 	// Update scene objects.
 	m_timer.Tick([&]()
 	{
-
+		// typing
+		DirectX::XMFLOAT2 curPos = m_sceneRenderer->GetTextfield().GetCaretPosByIndex(m_CursorIndex);	// TODO: do not ask it every frame
 		// consume one input queue item
 		if (m_InputQueue.size() > 0)
 		{
@@ -48,13 +55,53 @@ void FreeTypeChatMain::Update()
 				m_InputQueue.pop();	// TODO: do not pop if not in cache
 				m_sceneRenderer->AddChar(/*TODO: charCode*/);
 				m_sceneRenderer->GetCursor().ResetBlink(m_timer.GetTotalSeconds());
+
+				// type to textfield
+				float w = 0.03f + ((rand() * 60) / (RAND_MAX + 1)) / 1000.0f;	// [0.1..0.15)
+				float h = 0.07f + ((rand() * 60) / (RAND_MAX + 1)) / 1000.0f;	// [0.1..0.12)
+
+				Character c =
+				{
+					Rectangle(DirectX::XMFLOAT2(curPos.x, curPos.y), DirectX::XMFLOAT2(w, h)),
+					Rectangle(DirectX::XMFLOAT2(0.05f, ((rand() * 600) / (RAND_MAX + 1)) / 1000.0f), DirectX::XMFLOAT2(w, h))
+				};
+
+				m_sceneRenderer->GetTextfield().AddCharacter(m_CursorIndex, c);
+
+				m_CursorIndex += 1;
+				curPos = m_sceneRenderer->GetTextfield().GetCaretPosByIndex(m_CursorIndex);	// refresh cursor. TODO: fix it
 			}
 			else
 			{
 				// cursor movement
 				m_InputQueue.pop();
+
+				switch (key.m_VirtualKey)
+				{
+				case Windows::System::VirtualKey::Left:
+					if (m_CursorIndex > 0)
+					{
+						// cursor step back
+						m_CursorIndex -= 1;
+						curPos = m_sceneRenderer->GetTextfield().GetCaretPosByIndex(m_CursorIndex);	// refresh cursor. TODO: fix it
+						m_sceneRenderer->GetCursor().ResetBlink(m_timer.GetTotalSeconds());
+					}
+					break;
+				case Windows::System::VirtualKey::Right:
+					if (m_CursorIndex < m_sceneRenderer->GetTextfield().GetNumberOfChars())
+					{
+						// cursor step forward
+						m_CursorIndex += 1;
+						curPos = m_sceneRenderer->GetTextfield().GetCaretPosByIndex(m_CursorIndex);	// refresh cursor. TODO: fix it
+						m_sceneRenderer->GetCursor().ResetBlink(m_timer.GetTotalSeconds());
+					}
+					break;
+				}
 			}
+
 		}
+
+		m_sceneRenderer->GetCursor().Update(m_timer.GetTotalSeconds(), DirectX::XMFLOAT2(curPos.x, curPos.y + 0.03f));
 
 		m_sceneRenderer->Update(m_timer);
 	});

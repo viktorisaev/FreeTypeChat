@@ -11,8 +11,11 @@ using namespace DirectX;
 
 
 TextField::TextField() :
-	m_CurrentNumberOfChars(0)
+	m_TextfieldRectangles()
 {
+	m_BeginCaretPos = DirectX::XMFLOAT2(m_LeftTextfieldSide, 0.95f);
+
+	m_TextfieldRectangles.reserve(N_CHARS);
 }
 
 
@@ -61,12 +64,55 @@ void TextField::Update()
 
 
 
-void TextField::AddCharacter(Character _Char)
+void TextField::AddCharacter(UINT _Pos, Character _Char)
 {
-	m_TextfieldRectangles[m_CurrentNumberOfChars] = _Char;
-	m_CurrentNumberOfChars += 1;
+	//DirectX::XMFLOAT2 curPos = GetCaretPosByIndex(_Pos);
+
+	//if (curPos.x + (m_IntercharacterSpace + _Char.m_Geom.m_Size.x) > 0)	// text field width reached, move to the next line
+	//{
+	//	curPos.x = m_LeftTextfieldSide;
+	//	curPos.y -= m_CharacterRowHeight;
+	//}
+
+	//_Char.m_Geom.m_Pos = curPos;	// HACK: fix position keeping size and texture "as is"
+
+	m_TextfieldRectangles.insert(m_TextfieldRectangles.begin() +_Pos, _Char);
+
+	RePositionCharacters(_Pos);
 
 	MapToVertices();
+}
+
+
+
+
+void TextField::RePositionCharacters(UINT _StartPos)
+{
+	DirectX::XMFLOAT2 nextPos = m_BeginCaretPos;	// sart from top left
+
+	for (UINT i = 0, ei = GetNumberOfChars(); i < ei; ++i)
+	{
+		DirectX::XMFLOAT2 pos = nextPos;
+
+		Character curChar = m_TextfieldRectangles[i];
+		float w = curChar.m_Geom.m_Size.x;
+		float h = curChar.m_Geom.m_Size.y;
+
+		nextPos.x += (m_IntercharacterSpace + w);
+
+		if (nextPos.x > 0)	// text field width reached, move to the next line
+		{
+			nextPos.x = m_LeftTextfieldSide;
+			nextPos.y -= m_CharacterRowHeight;
+
+			pos = nextPos;
+
+			nextPos.x += (m_IntercharacterSpace + w);
+		}
+
+		m_TextfieldRectangles[i].m_Geom.m_Pos = pos;
+
+	}
 }
 
 
@@ -78,7 +124,7 @@ void TextField::MapToVertices()
 {
 	VertexPositionTexture *vertices = m_TextfieldVertices;
 
-	for (int i = 0, ei = m_CurrentNumberOfChars; i < ei; ++i)
+	for (int i = 0, ei = GetNumberOfChars(); i < ei; ++i)
 	{
 		Character &rect = m_TextfieldRectangles[i];
 
@@ -106,6 +152,48 @@ void TextField::MapToVertices()
 
 
 
+DirectX::XMFLOAT2 TextField::GetCaretPosByIndex(UINT _pos)
+{
+	DirectX::XMFLOAT2 curPos = m_BeginCaretPos;	// start from top left corner
+
+	for (UINT i = 0, ei = _pos; i < ei; ++i)
+	{
+		Character curChar = m_TextfieldRectangles[i];
+		float w = curChar.m_Geom.m_Size.x;
+		float h = curChar.m_Geom.m_Size.y;
+
+		curPos.x += (m_IntercharacterSpace + w);
+
+		if (curPos.x > 0)	// text field width reached, move to the next line
+		{
+			curPos.x = m_LeftTextfieldSide + (m_IntercharacterSpace + w);
+			curPos.y -= m_CharacterRowHeight;
+		}
+	}
+
+	// correct to next char (if not last)
+	if (_pos < GetNumberOfChars())
+	{
+		Character curChar = m_TextfieldRectangles[_pos];
+		float w = curChar.m_Geom.m_Size.x;
+		float h = curChar.m_Geom.m_Size.y;
+
+		if (curPos.x + (m_IntercharacterSpace + w) > 0)	// text field width reached, move to the next line
+		{
+			curPos.x = m_LeftTextfieldSide;
+			curPos.y -= m_CharacterRowHeight;
+		}
+	}
+
+	return curPos;
+}
+
+
+
+
+
+
+
 
 void TextField::Render(ID3D12GraphicsCommandList * _CommandList)
 {
@@ -115,7 +203,7 @@ void TextField::Render(ID3D12GraphicsCommandList * _CommandList)
 
 	_CommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);		// TODO: use triangle list to simplify as strip doesn't work for separate characters (rects). Possible solution: geometry shader.
 	_CommandList->IASetVertexBuffers(0, 1, &m_TextfieldVertexBufferView);
-	_CommandList->DrawInstanced(m_CurrentNumberOfChars * 6, 1, 0, 0);
+	_CommandList->DrawInstanced(GetNumberOfChars() * 6, 1, 0, 0);
 }
 
 

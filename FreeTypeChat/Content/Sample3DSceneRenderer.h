@@ -24,7 +24,10 @@ namespace FreeTypeChat
 		bool Render();
 		void SaveState();
 
+		bool IsLoadingComplete() { return m_loadingComplete; }
+
 		Cursor&	GetCursor() { return m_Cursor; }
+		TextField&	GetTextfield() { return m_TextField; }
 
 	private:
 		void LoadState();
@@ -79,12 +82,6 @@ namespace FreeTypeChat
 		Cursor		m_Cursor;
 		TextField	m_TextField;
 		FreeTypeRender m_FreeTypeRender;
-
-		// DEBUG. To be replaced with proper type mechanism
-		DirectX::XMFLOAT2 m_CaretPos;
-		float m_CharacterRowHeight = 0.13f;
-		float m_LeftTextfieldSide = -0.95f;
-		float m_IntercharacterSpace = 0.008f;
 	};
 }
 
