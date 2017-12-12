@@ -17,10 +17,9 @@ namespace FreeTypeChat
 		Sample3DSceneRenderer(const std::shared_ptr<DX::DeviceResources>& deviceResources);
 		~Sample3DSceneRenderer();
 		void CreateDeviceDependentResources();
-		void UpdateTexture();
 		void CreateWindowSizeDependentResources();
 		void Update(DX::StepTimer const& timer);
-		void AddChar();
+		void AddChar(UINT charCode);
 		bool Render();
 		void SaveState();
 
@@ -32,6 +31,7 @@ namespace FreeTypeChat
 	private:
 		void LoadState();
 		void Rotate(float radians);
+		void UpdateTexture(UINT charCode);
 
 	private:
 

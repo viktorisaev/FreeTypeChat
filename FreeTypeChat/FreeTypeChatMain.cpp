@@ -53,7 +53,7 @@ void FreeTypeChatMain::Update()
 			{
 				// character typed
 				m_InputQueue.pop();	// TODO: do not pop if not in cache
-				m_sceneRenderer->AddChar(/*TODO: charCode*/);
+				m_sceneRenderer->AddChar(key.m_CharCode);
 				m_sceneRenderer->GetCursor().ResetBlink(m_timer.GetTotalSeconds());
 
 				// type to textfield

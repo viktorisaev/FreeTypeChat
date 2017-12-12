@@ -23,7 +23,7 @@ FreeTypeRender::~FreeTypeRender()
 
 
 
-static FT_Error get_face(FT_Face*  face);
+static FT_Error get_face(FT_Face*  m_Face);
 
 
 /*
@@ -115,7 +115,7 @@ static FT_Error face_requester(FTC_FaceID  face_id,	FT_Library  library,	FT_Poin
 */
 
 
-int FreeTypeRender::test_render(FT_Face face, void* user_data)
+int FreeTypeRender::test_render(FT_Face m_Face, void* user_data, UINT _charCode)
 {
 	int           done = 0;
 
@@ -124,8 +124,8 @@ int FreeTypeRender::test_render(FT_Face face, void* user_data)
 	/* retrieve glyph index from character code */
 	//	FT_ULong charCode = 0x041C;
 //	FT_ULong charCode = 0x00BE;
-	FT_ULong charCode = 0x00A7;
-	FT_UInt glyph_index = FT_Get_Char_Index(face, charCode);
+	FT_ULong charCode = _charCode;
+	FT_UInt glyph_index = FT_Get_Char_Index(m_Face, charCode);
 
 	/* load glyph image into the slot (erase previous one) */
 	// binary
@@ -133,8 +133,8 @@ int FreeTypeRender::test_render(FT_Face face, void* user_data)
 	//	error = FT_Render_Glyph(face->glyph, FT_RENDER_MODE_MONO);
 
 	// alpha (?)
-	FT_Error error = FT_Load_Glyph(face, glyph_index, FT_LOAD_MONOCHROME);
-	error = FT_Render_Glyph(face->glyph, FT_RENDER_MODE_NORMAL);
+	FT_Error error = FT_Load_Glyph(m_Face, glyph_index, FT_LOAD_MONOCHROME);
+	error = FT_Render_Glyph(m_Face->glyph, FT_RENDER_MODE_NORMAL);
 
 	//	FT_Error error = FT_Load_Char(face, 0x0419, FT_LOAD_TARGET_MONO | FT_LOAD_MONOCHROME);
 
@@ -142,7 +142,7 @@ int FreeTypeRender::test_render(FT_Face face, void* user_data)
 }
 
 
-int FreeTypeRender::test_get_glyph(FT_Face face, void* user_data)
+int FreeTypeRender::test_get_glyph(FT_Face m_Face, void* user_data)
 {
 	FT_Glyph      glyph;
 	unsigned int  i;
@@ -151,12 +151,12 @@ int FreeTypeRender::test_get_glyph(FT_Face face, void* user_data)
 	FT_UNUSED(user_data);
 
 
-	for (i = first_index; i < (unsigned int)face->num_glyphs; i++)
+	for (i = first_index; i < (unsigned int)m_Face->num_glyphs; i++)
 	{
-		if (FT_Load_Glyph(face, i, load_flags))
+		if (FT_Load_Glyph(m_Face, i, load_flags))
 			continue;
 
-		if (!FT_Get_Glyph(face->glyph, &glyph))
+		if (!FT_Get_Glyph(m_Face->glyph, &glyph))
 		{
 			FT_Done_Glyph(glyph);
 			done++;
@@ -167,7 +167,7 @@ int FreeTypeRender::test_get_glyph(FT_Face face, void* user_data)
 }
 
 
-int FreeTypeRender::test_get_cbox(FT_Face    face, void*      user_data)
+int FreeTypeRender::test_get_cbox(FT_Face    m_Face, void*      user_data)
 {
 	FT_Glyph      glyph;
 	FT_BBox       bbox;
@@ -177,12 +177,12 @@ int FreeTypeRender::test_get_cbox(FT_Face    face, void*      user_data)
 	FT_UNUSED(user_data);
 
 
-	for (i = first_index; i < (unsigned int)face->num_glyphs; i++)
+	for (i = first_index; i < (unsigned int)m_Face->num_glyphs; i++)
 	{
-		if (FT_Load_Glyph(face, i, load_flags))
+		if (FT_Load_Glyph(m_Face, i, load_flags))
 			continue;
 
-		if (FT_Get_Glyph(face->glyph, &glyph))
+		if (FT_Get_Glyph(m_Face->glyph, &glyph))
 			continue;
 
 		FT_Glyph_Get_CBox(glyph, FT_GLYPH_BBOX_PIXELS, &bbox);
@@ -195,7 +195,7 @@ int FreeTypeRender::test_get_cbox(FT_Face    face, void*      user_data)
 }
 
 
-int FreeTypeRender::test_get_bbox(FT_Face    face,	void*      user_data)
+int FreeTypeRender::test_get_bbox(FT_Face    m_Face,	void*      user_data)
 {
 	FT_BBox       bbox;
 	unsigned int  i;
@@ -205,15 +205,15 @@ int FreeTypeRender::test_get_bbox(FT_Face    face,	void*      user_data)
 	FT_UNUSED(user_data);
 
 
-	for (i = first_index; i < (unsigned int)face->num_glyphs; i++)
+	for (i = first_index; i < (unsigned int)m_Face->num_glyphs; i++)
 	{
 		FT_Outline*  outline;
 
 
-		if (FT_Load_Glyph(face, i, load_flags))
+		if (FT_Load_Glyph(m_Face, i, load_flags))
 			continue;
 
-		outline = &face->glyph->outline;
+		outline = &m_Face->glyph->outline;
 
 		/* rotate outline by 30 degrees */
 		FT_Outline_Transform(outline, &rot30);
@@ -227,7 +227,7 @@ int FreeTypeRender::test_get_bbox(FT_Face    face,	void*      user_data)
 }
 
 
-int FreeTypeRender::test_get_char_index(FT_Face    face,	void*      user_data)
+int FreeTypeRender::test_get_char_index(FT_Face    m_Face,	void*      user_data)
 {
 	bcharset_t*  charset = (bcharset_t*)user_data;
 	int          i, done = 0;
@@ -235,7 +235,7 @@ int FreeTypeRender::test_get_char_index(FT_Face    face,	void*      user_data)
 
 	for (i = 0; i < charset->size; i++)
 	{
-		if (FT_Get_Char_Index(face, charset->code[i]))
+		if (FT_Get_Char_Index(m_Face, charset->code[i]))
 			done++;
 	}
 
@@ -243,7 +243,7 @@ int FreeTypeRender::test_get_char_index(FT_Face    face,	void*      user_data)
 }
 
 
-int FreeTypeRender::test_image_cache(FT_Face    face, void*      user_data)
+int FreeTypeRender::test_image_cache(FT_Face    m_Face, void*      user_data)
 {
 	FT_Glyph      glyph;
 	unsigned int  i;
@@ -258,7 +258,7 @@ int FreeTypeRender::test_image_cache(FT_Face    face, void*      user_data)
 			return 0;
 	}
 
-	for (i = first_index; i < (unsigned int)face->num_glyphs; i++)
+	for (i = first_index; i < (unsigned int)m_Face->num_glyphs; i++)
 	{
 		if (!FTC_ImageCache_Lookup(image_cache,
 			&font_type,
@@ -276,31 +276,31 @@ int FreeTypeRender::test_image_cache(FT_Face    face, void*      user_data)
 * main
 */
 
-void FreeTypeRender::get_charset(FT_Face      face, bcharset_t*  charset)
+void FreeTypeRender::get_charset(FT_Face      m_Face, bcharset_t*  charset)
 {
 	FT_ULong  charcode;
 	FT_UInt   gindex;
 	int       i;
 
 
-	charset->code = (FT_ULong*)calloc((size_t)face->num_glyphs,
+	charset->code = (FT_ULong*)calloc((size_t)m_Face->num_glyphs,
 		sizeof(FT_ULong));
 	if (!charset->code)
 		return;
 
-	if (face->charmap)
+	if (m_Face->charmap)
 	{
 		i = 0;
-		charcode = FT_Get_First_Char(face, &gindex);
+		charcode = FT_Get_First_Char(m_Face, &gindex);
 
 		/* certain fonts contain a broken charmap that will map character */
 		/* codes to out-of-bounds glyph indices.  Take care of that here. */
 		/*                                                                */
-		while (gindex && i < face->num_glyphs)
+		while (gindex && i < m_Face->num_glyphs)
 		{
 			if (gindex >= first_index)
 				charset->code[i++] = charcode;
-			charcode = FT_Get_Next_Char(face, charcode, &gindex);
+			charcode = FT_Get_Next_Char(m_Face, charcode, &gindex);
 		}
 	}
 	else
@@ -310,7 +310,7 @@ void FreeTypeRender::get_charset(FT_Face      face, bcharset_t*  charset)
 
 		/* no charmap, do an identity mapping */
 		for (i = 0, j = first_index;
-			j < (unsigned int)face->num_glyphs;
+			j < (unsigned int)m_Face->num_glyphs;
 			i++, j++)
 			charset->code[i] = j;
 	}
@@ -319,7 +319,7 @@ void FreeTypeRender::get_charset(FT_Face      face, bcharset_t*  charset)
 }
 
 
-FT_Error FreeTypeRender::get_face(FT_Face*  face)
+FT_Error FreeTypeRender::get_face(FT_Face*  m_Face)
 {
 	static unsigned char*  memory_file = NULL;
 	static size_t          memory_size;
@@ -329,10 +329,10 @@ FT_Error FreeTypeRender::get_face(FT_Face*  face)
 
 	if (preload)
 	{
-		error = FT_New_Memory_Face(lib,	m_FontData.data(), (FT_Long)m_FontData.size(), face_index, face);
+		error = FT_New_Memory_Face(lib,	m_FontData.data(), (FT_Long)m_FontData.size(), face_index, m_Face);
 	}
 	else
-		error = FT_New_Face(lib, filename, face_index, face);
+		error = FT_New_Face(lib, filename, face_index, m_Face);
 
 	if (error)
 		fprintf(stderr, "couldn't load font resource\n");
@@ -342,13 +342,18 @@ FT_Error FreeTypeRender::get_face(FT_Face*  face)
 
 byte* FreeTypeRender::GetBitmap()
 {
-	return face->glyph->bitmap.buffer;
+	return m_Face->glyph->bitmap.buffer;
 }
 
 
 std::pair<int, int> FreeTypeRender::GetBitmapSize()
 {
-	return std::make_pair(face->glyph->bitmap.width, face->glyph->bitmap.rows);
+	return std::make_pair(m_Face->glyph->bitmap.width, m_Face->glyph->bitmap.rows);
+}
+
+void FreeTypeRender::CreateGlyphBitmap(UINT _charCode)
+{
+	test_render(m_Face, nullptr, _charCode);
 }
 
 
@@ -675,7 +680,7 @@ int FreeTypeRender::mmmmmmmmain()
 	filename = "arial.ttf";
 	preload = 1;
 
-	if (get_face(&face))
+	if (get_face(&m_Face))
 		goto Exit;
 
 
@@ -684,9 +689,9 @@ int FreeTypeRender::mmmmmmmmain()
 
 	if (size)
 	{
-		if (FT_IS_SCALABLE(face))
+		if (FT_IS_SCALABLE(m_Face))
 		{
-			if (FT_Set_Pixel_Sizes(face, size, size))
+			if (FT_Set_Pixel_Sizes(m_Face, size, size))
 			{
 				fprintf(stderr, "failed to set pixel size to %d\n", size);
 
@@ -695,10 +700,10 @@ int FreeTypeRender::mmmmmmmmain()
 		}
 		else
 		{
-			size = (unsigned int)face->available_sizes[0].size >> 6;
+			size = (unsigned int)m_Face->available_sizes[0].size >> 6;
 			fprintf(stderr,
 				"using size of first bitmap strike (%dpx)\n", size);
-			FT_Select_Size(face, 0);
+			FT_Select_Size(m_Face, 0);
 		}
 	}
 
@@ -707,7 +712,7 @@ int FreeTypeRender::mmmmmmmmain()
 		0,
 		max_bytes,
 		face_requester,
-		face,
+		m_Face,
 		&cache_man);
 
 	font_type.face_id = (FTC_FaceID)1;
@@ -727,8 +732,8 @@ int FreeTypeRender::mmmmmmmmain()
 		"family: %s\n"
 		" style: %s\n"
 		"\n",
-		face->family_name,
-		face->style_name);
+		m_Face->family_name,
+		m_Face->style_name);
 
 	if (max_iter)
 		printf("number of iterations for each test: at most %d\n",
@@ -761,7 +766,7 @@ int FreeTypeRender::mmmmmmmmain()
 	printf("\n"
 		"executing tests:\n");
 
-	test_render(face, nullptr);
+	test_render(m_Face, nullptr, 0x00BE);
 
 Exit:
 	/* The following is a bit subtle: When we call FTC_Manager_Done, this

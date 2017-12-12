@@ -39,20 +39,22 @@ public:
 	byte* GetBitmap();
 	std::pair<int, int> GetBitmapSize();
 
+	void CreateGlyphBitmap(UINT _charCode);
+
 private:
-	int test_render(FT_Face face, void* user_data);
-	int test_get_glyph(FT_Face face, void* user_data);
-	int test_get_cbox(FT_Face    face, void*      user_data);
-	int test_get_bbox(FT_Face    face, void*      user_data);
-	int test_get_char_index(FT_Face    face, void*      user_data);
-	int test_image_cache(FT_Face    face, void*      user_data);
-	void get_charset(FT_Face      face, bcharset_t*  charset);
-	FT_Error get_face(FT_Face*  face);
+	int test_render(FT_Face m_Face, void * user_data, UINT _charCode);
+	int test_get_glyph(FT_Face m_Face, void* user_data);
+	int test_get_cbox(FT_Face    m_Face, void*      user_data);
+	int test_get_bbox(FT_Face    m_Face, void*      user_data);
+	int test_get_char_index(FT_Face    m_Face, void*      user_data);
+	int test_image_cache(FT_Face    m_Face, void*      user_data);
+	void get_charset(FT_Face      m_Face, bcharset_t*  charset);
+	FT_Error get_face(FT_Face*  m_Face);
 
 
 private:
 	std::vector<byte>									m_FontData;
-	FT_Face   face;
+	FT_Face   m_Face;
 
 };
 

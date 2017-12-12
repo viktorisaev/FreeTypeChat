@@ -353,7 +353,7 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 		m_ScreenGrid.InitializeGrid(m_deviceResources, m_commandList.Get(), N_GRID_VERT, N_GRID_HORZ);
 
 		// cursor
-		m_Cursor.InitializeCursor(m_deviceResources, m_texHeap.Get(), m_commandList.Get(), DirectX::XMFLOAT2(0.007f, 0.15f), 0.5 );
+		m_Cursor.InitializeCursor(m_deviceResources, m_texHeap.Get(), m_commandList.Get(), DirectX::XMFLOAT2(0.008f, 0.15f), 0.5 );
 
 		// text field
 		m_TextField.InitializeTextfield(m_deviceResources);
@@ -370,7 +370,7 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 		m_FreeTypeRender.mmmmmmmmain();
 
 
-		UpdateTexture();
+		UpdateTexture(0x00BE);
 	});
 
 
@@ -386,8 +386,10 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 
 
 
-void FreeTypeChat::Sample3DSceneRenderer::UpdateTexture()
+void FreeTypeChat::Sample3DSceneRenderer::UpdateTexture(UINT charCode)
 {
+
+	m_FreeTypeRender.CreateGlyphBitmap(charCode);
 
 	std::pair<int, int> bitmapSize = m_FreeTypeRender.GetBitmapSize();
 
@@ -546,11 +548,11 @@ void Sample3DSceneRenderer::Update(DX::StepTimer const& timer)
 
 
 // TODO: add char to output
-void Sample3DSceneRenderer::AddChar()
+void Sample3DSceneRenderer::AddChar(UINT charCode)
 {
 	if (m_loadingComplete)
 	{
-		UpdateTexture();
+		UpdateTexture(charCode);
 	}
 }
 
