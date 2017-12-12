@@ -54,6 +54,7 @@ public:
 	void Render(ID3D12GraphicsCommandList *_CommandList);
 
 	void AddCharacter(UINT _Pos, Character _Char);
+	void DeleteCharacter(UINT _Pos);
 
 	UINT GetNumberOfChars() { return m_TextfieldRectangles.size(); }
 	DirectX::XMFLOAT2 GetCaretPosByIndex(UINT _pos);	// calculates caret pos by index of a character

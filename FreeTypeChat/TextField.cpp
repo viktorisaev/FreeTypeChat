@@ -79,8 +79,13 @@ void TextField::AddCharacter(UINT _Pos, Character _Char)
 	m_TextfieldRectangles.insert(m_TextfieldRectangles.begin() +_Pos, _Char);
 
 	RePositionCharacters(_Pos);
+}
 
-	MapToVertices();
+void TextField::DeleteCharacter(UINT _Pos)
+{
+	m_TextfieldRectangles.erase(m_TextfieldRectangles.begin() + _Pos);	// TODO; fix artefact that type vertext buffer could be being rendered at the time of modification
+
+	RePositionCharacters(_Pos);
 }
 
 
@@ -113,6 +118,8 @@ void TextField::RePositionCharacters(UINT _StartPos)
 		m_TextfieldRectangles[i].m_Geom.m_Pos = pos;
 
 	}
+
+	MapToVertices();
 }
 
 

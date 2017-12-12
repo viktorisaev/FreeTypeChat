@@ -96,6 +96,16 @@ void FreeTypeChatMain::Update()
 						m_sceneRenderer->GetCursor().ResetBlink(m_timer.GetTotalSeconds());
 					}
 					break;
+				case Windows::System::VirtualKey::Back:
+					if (m_CursorIndex > 0)
+					{
+						// cursor step forward
+						m_CursorIndex -= 1;
+						m_sceneRenderer->GetTextfield().DeleteCharacter(m_CursorIndex);
+						curPos = m_sceneRenderer->GetTextfield().GetCaretPosByIndex(m_CursorIndex);	// refresh cursor. TODO: fix it
+						m_sceneRenderer->GetCursor().ResetBlink(m_timer.GetTotalSeconds());
+					}
+					break;
 				}
 			}
 
