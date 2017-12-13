@@ -34,6 +34,8 @@ Sample3DSceneRenderer::Sample3DSceneRenderer(const std::shared_ptr<DX::DeviceRes
 
 	CreateDeviceDependentResources();
 	CreateWindowSizeDependentResources();
+
+	m_NextGlyphPos = DirectX::XMINT2(0, 0);
 }
 
 Sample3DSceneRenderer::~Sample3DSceneRenderer()
@@ -41,6 +43,10 @@ Sample3DSceneRenderer::~Sample3DSceneRenderer()
 //	m_constantBuffer->Unmap(0, nullptr);
 //	m_mappedConstantBuffer = nullptr;
 }
+
+
+
+
 
 void Sample3DSceneRenderer::CreateDeviceDependentResources()
 {
@@ -287,8 +293,8 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 		{
 			D3D12_RESOURCE_DESC desc = {};
 
-			desc.Width = static_cast<UINT>(m_Width);
-			desc.Height = static_cast<UINT>(m_Height);
+			desc.Width = static_cast<UINT>(m_FontTextureSize.x);
+			desc.Height = static_cast<UINT>(m_FontTextureSize.y);
 			desc.MipLevels = static_cast<UINT16>(1);
 			desc.DepthOrArraySize = static_cast<UINT16>(1);
 			desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -305,22 +311,22 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 			NAME_D3D12_OBJECT(m_UploadHeap);
 
 			D3D12_SUBRESOURCE_DATA subData = {};
-			byte *textur = new byte[m_Width * m_Height * 4];
+			byte *textur = new byte[m_FontTextureSize.x * m_FontTextureSize.y * 4];
 
-			for (int i = 0, ei = m_Height; i < ei; ++i)
+			for (int i = 0, ei = m_FontTextureSize.y; i < ei; ++i)
 			{
-				for (int j = 0, ej = m_Width; j < ej; ++j)
+				for (int j = 0, ej = m_FontTextureSize.x; j < ej; ++j)
 				{
-					textur[(i * m_Width + j) * 4 + 0] = i * 3;
-					textur[(i * m_Width + j) * 4 + 1] = j * 3;
-					textur[(i * m_Width + j) * 4 + 2] = 0xFF;
-					textur[(i * m_Width + j) * 4 + 3] = (i % 4 == 0) ? 0xFF : (j % 2 == 0) ? 0x80 : 0x00;
+					textur[(i * m_FontTextureSize.x + j) * 4 + 0] = i * 3;
+					textur[(i * m_FontTextureSize.x + j) * 4 + 1] = j * 3;
+					textur[(i * m_FontTextureSize.x + j) * 4 + 2] = 0xFF;
+					textur[(i * m_FontTextureSize.x + j) * 4 + 3] = (i % 4 == 0) ? 0xFF : (j % 2 == 0) ? 0x80 : 0x00;
 				}
 			}
 
 			subData.pData = textur;
-			subData.RowPitch = 4 * m_Width;
-			subData.SlicePitch = m_Height * subData.RowPitch;
+			subData.RowPitch = 4 * m_FontTextureSize.x;
+			subData.SlicePitch = m_FontTextureSize.y * subData.RowPitch;
 
 			UpdateSubresources(m_commandList.Get(), m_Texture.Get(), m_UploadHeap.Get(), 0, 0, 1, &subData);
 
@@ -367,7 +373,7 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 		// Wait for the command list to finish executing; the vertex/index buffers need to be uploaded to the GPU before the upload resources go out of scope.
 		m_deviceResources->WaitForGpu();
 
-		m_FreeTypeRender.mmmmmmmmain();
+		m_FreeTypeRender.Initialize(48);
 
 
 		UpdateTexture(0x00BE);
@@ -386,8 +392,29 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 
 
 
-void FreeTypeChat::Sample3DSceneRenderer::UpdateTexture(UINT charCode)
+
+GlyphInTexture FreeTypeChat::Sample3DSceneRenderer::UpdateTexture(UINT charCode)
 {
+
+	// check if glyph already there
+	std::vector<GlyphInTexture>::const_iterator ut = m_FreeTypeCacheVector.end();
+	{
+//		std::lock_guard<std::mutex> locker_cache(m_FreeTypeCacheMutex);		// we are only writers to the cache
+
+		GlyphInTexture curGlyph(charCode);
+
+		ut = std::lower_bound(m_FreeTypeCacheVector.begin(), m_FreeTypeCacheVector.end(), curGlyph);
+
+		if (ut != m_FreeTypeCacheVector.end())
+		{
+			if (ut->m_CharCode == charCode)
+			{
+				return GlyphInTexture();
+			}
+		}
+	}
+
+
 
 	m_FreeTypeRender.CreateGlyphBitmap(charCode);
 
@@ -396,8 +423,28 @@ void FreeTypeChat::Sample3DSceneRenderer::UpdateTexture(UINT charCode)
 	int w = bitmapSize.first;// 20 + (rand() * 50) / (RAND_MAX + 1);
 	int h = bitmapSize.second;// 20 + (rand() * 50) / (RAND_MAX + 1);
 
-	int x = (rand() * (m_Width - w)) / (RAND_MAX + 1);
-	int y = (rand() * (m_Height - h)) / (RAND_MAX + 1);
+	DirectX::XMINT2 nextPos = DirectX::XMINT2(m_NextGlyphPos.x + w, m_NextGlyphPos.y);
+
+	if (nextPos.x > m_FontTextureSize.x)
+	{
+		// new line
+		nextPos.x = 0;
+		nextPos.y += 48;
+
+		m_NextGlyphPos = nextPos;
+
+		nextPos.x += w;	// at least one glyph should have space in one row
+	}
+
+	if (m_NextGlyphPos.y + h > m_FontTextureSize.y)
+	{
+		return GlyphInTexture();	// TODO: out of vertical texture size. Add texture?
+	}
+
+	int x = m_NextGlyphPos.x;
+	int y = m_NextGlyphPos.y;
+
+	m_NextGlyphPos = nextPos;
 
 
 	// update texture
@@ -420,8 +467,8 @@ void FreeTypeChat::Sample3DSceneRenderer::UpdateTexture(UINT charCode)
 
 		D3D12_TEXTURE_COPY_LOCATION srcLocation = {};
 		srcLocation.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
-		srcLocation.PlacedFootprint.Footprint.Width = m_Width;
-		srcLocation.PlacedFootprint.Footprint.Height = m_Height;
+		srcLocation.PlacedFootprint.Footprint.Width = m_FontTextureSize.x;
+		srcLocation.PlacedFootprint.Footprint.Height = m_FontTextureSize.y;
 		srcLocation.PlacedFootprint.Footprint.Depth = 1;
 		srcLocation.PlacedFootprint.Footprint.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 		srcLocation.PlacedFootprint.Footprint.RowPitch = srcLocation.PlacedFootprint.Footprint.Width * 4;
@@ -433,19 +480,20 @@ void FreeTypeChat::Sample3DSceneRenderer::UpdateTexture(UINT charCode)
 
 		byte *glyph = m_FreeTypeRender.GetBitmap();
 
-		byte valr = 10 + (rand() * (243)) / (RAND_MAX + 1);
-		byte valg = 10 + (rand() * (243)) / (RAND_MAX + 1);
-		byte valb = 10 + (rand() * (243)) / (RAND_MAX + 1);
-		byte mult = 0 + (rand() * (255)) / (RAND_MAX + 1);
+		byte valr = 0xFF;
+		//byte valr = 10 + (rand() * (243)) / (RAND_MAX + 1);
+		//byte valg = 10 + (rand() * (243)) / (RAND_MAX + 1);
+		//byte valb = 10 + (rand() * (243)) / (RAND_MAX + 1);
+		//byte mult = 0 + (rand() * (255)) / (RAND_MAX + 1);
 
 		for (int i = 0, ei = h; i < ei; ++i)
 		{
 			for (int j = 0, ej = w; j < ej; ++j)
 			{
-				pData[((y+i) * m_Width + x+j) * 4 + 0] = valr;
-				pData[((y+i) * m_Width + x+j) * 4 + 1] = valg;
-				pData[((y+i) * m_Width + x+j) * 4 + 2] = valb;
-				pData[((y+i) * m_Width + x+j) * 4 + 3] = glyph[i*w+j];
+				pData[((y+i) * m_FontTextureSize.x + x+j) * 4 + 0] = valr;
+				pData[((y+i) * m_FontTextureSize.x + x+j) * 4 + 1] = valr;
+				pData[((y+i) * m_FontTextureSize.x + x+j) * 4 + 2] = valr;
+				pData[((y+i) * m_FontTextureSize.x + x+j) * 4 + 3] = glyph[i*w+j];
 			}
 		}
 
@@ -464,6 +512,20 @@ void FreeTypeChat::Sample3DSceneRenderer::UpdateTexture(UINT charCode)
 	m_deviceResources->GetCommandQueue()->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
 	m_deviceResources->WaitForGpu();
+
+	// add item to cache
+	{
+		std::lock_guard<std::mutex> locker_cache(m_FreeTypeCacheMutex);
+
+		Rectangle texCoord(DirectX::XMFLOAT2((float)x / (float)m_FontTextureSize.x, (float)y / (float)m_FontTextureSize.y), DirectX::XMFLOAT2((float)w / (float)m_FontTextureSize.x, (float)h / (float)m_FontTextureSize.y));
+
+		GlyphInTexture curGlyph(charCode, texCoord);
+
+		m_FreeTypeCacheVector.insert(ut, curGlyph);
+
+		return curGlyph;
+	}	// mem release semantic
+
 }
 
 
@@ -547,17 +609,50 @@ void Sample3DSceneRenderer::Update(DX::StepTimer const& timer)
 
 
 
-// TODO: add char to output
-void Sample3DSceneRenderer::AddChar(UINT charCode)
+bool FreeTypeChat::Sample3DSceneRenderer::GetGlyph(UINT charCode, GlyphInTexture & _Glyph)
 {
-	if (m_loadingComplete)
 	{
-		UpdateTexture(charCode);
+		std::lock_guard<std::mutex> locker_cache(m_FreeTypeCacheMutex);
+
+		GlyphInTexture curGlyph(charCode);
+		std::vector<GlyphInTexture>::const_iterator ut = std::lower_bound(m_FreeTypeCacheVector.begin(), m_FreeTypeCacheVector.end(), curGlyph);
+
+		if (ut != m_FreeTypeCacheVector.end())
+		{
+			if (ut->m_CharCode == charCode)
+			{
+				_Glyph = *ut;
+				return true;
+			}
+		}
+
+		return false;
 	}
 }
 
 
 
+
+
+// TODO: add char to output
+GlyphInTexture Sample3DSceneRenderer::AddCharToCache(UINT charCode)
+{
+	if (m_loadingComplete)
+	{
+		return UpdateTexture(charCode);
+	}
+	
+	return GlyphInTexture();
+}
+
+
+
+
+
+DirectX::XMINT2 Sample3DSceneRenderer::GetFontTextureSize()
+{
+	return m_FontTextureSize;
+}
 
 
 
@@ -594,6 +689,9 @@ void Sample3DSceneRenderer::LoadState()
 		state->Remove(TrackingKey);
 	}
 }
+
+
+
 
 // Rotate the 3D cube model a set amount of radians.
 void Sample3DSceneRenderer::Rotate(float radians)

@@ -81,6 +81,11 @@ void TextField::AddCharacter(UINT _Pos, Character _Char)
 	RePositionCharacters(_Pos);
 }
 
+
+
+
+
+
 void TextField::DeleteCharacter(UINT _Pos)
 {
 	m_TextfieldRectangles.erase(m_TextfieldRectangles.begin() + _Pos);	// TODO; fix artefact that type vertext buffer could be being rendered at the time of modification

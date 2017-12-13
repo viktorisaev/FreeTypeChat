@@ -33,16 +33,17 @@ public:
 	FreeTypeRender();
 	~FreeTypeRender();
 
-	int FreeTypeRender::mmmmmmmmain();
+	int FreeTypeRender::Initialize(UINT _FontSize);
 	Concurrency::task<void> LoadFreeTypeResources();
 
 	byte* GetBitmap();
 	std::pair<int, int> GetBitmapSize();
+	std::pair<int, int> GetBitmapTopLeft();
 
 	void CreateGlyphBitmap(UINT _charCode);
 
 private:
-	int test_render(FT_Face m_Face, void * user_data, UINT _charCode);
+	void RenderGlyph(FT_Face m_Face, UINT _charCode);
 	int test_get_glyph(FT_Face m_Face, void* user_data);
 	int test_get_cbox(FT_Face    m_Face, void*      user_data);
 	int test_get_bbox(FT_Face    m_Face, void*      user_data);

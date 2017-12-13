@@ -39,7 +39,7 @@ void FreeTypeChatMain::Update()
 	}
 
 	// Update scene objects.
-	m_timer.Tick([&]()
+	m_timer.Tick([&,this]()
 	{
 		// typing
 		DirectX::XMFLOAT2 curPos = m_sceneRenderer->GetTextfield().GetCaretPosByIndex(m_CursorIndex);	// TODO: do not ask it every frame
@@ -53,17 +53,29 @@ void FreeTypeChatMain::Update()
 			{
 				// character typed
 				m_InputQueue.pop();	// TODO: do not pop if not in cache
-				m_sceneRenderer->AddChar(key.m_CharCode);
+
+				GlyphInTexture glyph;
+				if (!m_sceneRenderer->GetGlyph(key.m_CharCode, glyph))
+				{
+					glyph = m_sceneRenderer->AddCharToCache(key.m_CharCode);
+				}
+				// glyph = glyph for key.m_CharCode
+
 				m_sceneRenderer->GetCursor().ResetBlink(m_timer.GetTotalSeconds());
 
 				// type to textfield
-				float w = 0.03f + ((rand() * 60) / (RAND_MAX + 1)) / 1000.0f;	// [0.1..0.15)
-				float h = 0.07f + ((rand() * 60) / (RAND_MAX + 1)) / 1000.0f;	// [0.1..0.12)
+//				DirectX::XMINT2 fontTexSize = m_sceneRenderer->GetFontTextureSize();
+				float tx = glyph.m_TexCoord.m_Pos.x;
+				float ty = glyph.m_TexCoord.m_Pos.y;
+				float w = glyph.m_TexCoord.m_Size.x;
+				float h = glyph.m_TexCoord.m_Size.y;
+
+				// TODO: set position in TextField
 
 				Character c =
 				{
 					Rectangle(DirectX::XMFLOAT2(curPos.x, curPos.y), DirectX::XMFLOAT2(w, h)),
-					Rectangle(DirectX::XMFLOAT2(0.05f, ((rand() * 600) / (RAND_MAX + 1)) / 1000.0f), DirectX::XMFLOAT2(w, h))
+					Rectangle(DirectX::XMFLOAT2(tx, ty), DirectX::XMFLOAT2(w, h))
 				};
 
 				m_sceneRenderer->GetTextfield().AddCharacter(m_CursorIndex, c);

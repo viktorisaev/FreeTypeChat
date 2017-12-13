@@ -10,6 +10,39 @@
 
 namespace FreeTypeChat
 {
+
+
+	class GlyphInTexture
+	{
+	public:
+		GlyphInTexture() :
+		  m_CharCode(0)
+		, m_TexCoord()
+		{}
+
+		GlyphInTexture(UINT _CharCode, Rectangle _TexCoord) :
+			m_CharCode(_CharCode)
+			, m_TexCoord(_TexCoord)
+		{}
+
+		GlyphInTexture(UINT _CharCode) :
+			m_CharCode(_CharCode)
+			, m_TexCoord()
+		{}
+
+		bool operator<(const GlyphInTexture& _other)
+		{
+			return this->m_CharCode < _other.m_CharCode;
+		}
+
+
+	public:
+		UINT m_CharCode;
+		Rectangle m_TexCoord;
+	};
+
+
+
 	// This sample renderer instantiates a basic rendering pipeline.
 	class Sample3DSceneRenderer
 	{
@@ -19,7 +52,7 @@ namespace FreeTypeChat
 		void CreateDeviceDependentResources();
 		void CreateWindowSizeDependentResources();
 		void Update(DX::StepTimer const& timer);
-		void AddChar(UINT charCode);
+		GlyphInTexture AddCharToCache(UINT charCode);
 		bool Render();
 		void SaveState();
 
@@ -28,15 +61,17 @@ namespace FreeTypeChat
 		Cursor&	GetCursor() { return m_Cursor; }
 		TextField&	GetTextfield() { return m_TextField; }
 
+		bool GetGlyph(UINT charCode, GlyphInTexture& _Glyph);
+		DirectX::XMINT2 GetFontTextureSize();
+
 	private:
 		void LoadState();
 		void Rotate(float radians);
-		void UpdateTexture(UINT charCode);
+		GlyphInTexture UpdateTexture(UINT charCode);
 
 	private:
 
-		const int m_Width = 512;
-		const int m_Height = 512;
+		const DirectX::XMINT2 m_FontTextureSize { 512, 512 };
 
 
 		// Constant buffers must be 256-byte aligned.
@@ -82,6 +117,13 @@ namespace FreeTypeChat
 		Cursor		m_Cursor;
 		TextField	m_TextField;
 		FreeTypeRender m_FreeTypeRender;
+
+		// TODO: move to glyph texture render
+		DirectX::XMINT2		m_NextGlyphPos;
+
+		std::mutex m_FreeTypeCacheMutex;
+		std::vector<GlyphInTexture> m_FreeTypeCacheVector;				// current characters cache (all used characters)
+
 	};
 }
 

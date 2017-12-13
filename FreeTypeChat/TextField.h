@@ -14,24 +14,6 @@ namespace FreeTypeChat
 {
 
 
-class Rectangle
-{
-public:
-	Rectangle() :
-	  m_Pos(0.0f, 0.0f)
-	, m_Size(0.0f, 0.0f)
-	{ }
-	Rectangle(DirectX::XMFLOAT2 _Pos, DirectX::XMFLOAT2 _Size) :
-	  m_Pos(_Pos)
-	, m_Size(_Size)
-	{ }
-
-
-public:
-	DirectX::XMFLOAT2 m_Pos;
-	DirectX::XMFLOAT2 m_Size;
-};
-
 
 class Character
 {
