@@ -99,7 +99,6 @@ void FreeTypeChatMain::Update()
 				case Windows::System::VirtualKey::Back:
 					if (m_CursorIndex > 0)
 					{
-						// cursor step forward
 						m_CursorIndex -= 1;
 						m_sceneRenderer->GetTextfield().DeleteCharacter(m_CursorIndex);
 						curPos = m_sceneRenderer->GetTextfield().GetCaretPosByIndex(m_CursorIndex);	// refresh cursor. TODO: fix it
@@ -109,11 +108,20 @@ void FreeTypeChatMain::Update()
 				case Windows::System::VirtualKey::Delete:
 					if (m_CursorIndex < m_sceneRenderer->GetTextfield().GetNumberOfChars())
 					{
-						// cursor step forward
 						m_sceneRenderer->GetTextfield().DeleteCharacter(m_CursorIndex);
 						curPos = m_sceneRenderer->GetTextfield().GetCaretPosByIndex(m_CursorIndex);	// refresh cursor. TODO: fix it
 						m_sceneRenderer->GetCursor().ResetBlink(m_timer.GetTotalSeconds());
 					}
+					break;
+				case Windows::System::VirtualKey::Home:
+					m_CursorIndex = 0;
+					curPos = m_sceneRenderer->GetTextfield().GetCaretPosByIndex(m_CursorIndex);	// refresh cursor. TODO: fix it
+					m_sceneRenderer->GetCursor().ResetBlink(m_timer.GetTotalSeconds());
+					break;
+				case Windows::System::VirtualKey::End:
+					m_CursorIndex = m_sceneRenderer->GetTextfield().GetNumberOfChars();
+					curPos = m_sceneRenderer->GetTextfield().GetCaretPosByIndex(m_CursorIndex);	// refresh cursor. TODO: fix it
+					m_sceneRenderer->GetCursor().ResetBlink(m_timer.GetTotalSeconds());
 					break;
 				}
 			}
