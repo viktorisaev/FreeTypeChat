@@ -16,18 +16,21 @@ namespace FreeTypeChat
 	{
 	public:
 		GlyphInTexture() :
-		  m_CharCode(0)
-		, m_TexCoord()
+			m_CharCode(0)
+			, m_TexCoord()
+			, m_Baseline(0.0f)
 		{}
 
-		GlyphInTexture(UINT _CharCode, Rectangle _TexCoord) :
+		GlyphInTexture(UINT _CharCode, Rectangle _TexCoord, float _Baseline) :
 			m_CharCode(_CharCode)
 			, m_TexCoord(_TexCoord)
+			, m_Baseline(_Baseline)
 		{}
 
 		GlyphInTexture(UINT _CharCode) :
-			m_CharCode(_CharCode)
+			  m_CharCode(_CharCode)
 			, m_TexCoord()
+			, m_Baseline(0.0f)
 		{}
 
 		bool operator<(const GlyphInTexture& _other)
@@ -39,6 +42,7 @@ namespace FreeTypeChat
 	public:
 		UINT m_CharCode;
 		Rectangle m_TexCoord;
+		float m_Baseline;
 	};
 
 
@@ -63,6 +67,9 @@ namespace FreeTypeChat
 
 		bool GetGlyph(UINT charCode, GlyphInTexture& _Glyph);
 		DirectX::XMINT2 GetFontTextureSize();
+
+		Windows::Foundation::Size GetOutputSize();
+
 
 	private:
 		void LoadState();

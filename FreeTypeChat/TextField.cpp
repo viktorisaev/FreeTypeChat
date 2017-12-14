@@ -13,8 +13,6 @@ using namespace DirectX;
 TextField::TextField() :
 	m_TextfieldRectangles()
 {
-	m_BeginCaretPos = DirectX::XMFLOAT2(m_LeftTextfieldSide, 0.95f);
-
 	m_TextfieldRectangles.reserve(N_CHARS);
 }
 
@@ -98,9 +96,10 @@ void TextField::DeleteCharacter(UINT _Pos)
 
 void TextField::RePositionCharacters(UINT _StartPos)
 {
-	DirectX::XMFLOAT2 nextPos = _StartPos > 0 ? m_TextfieldRectangles[_StartPos-1].m_Geom.m_Pos : m_BeginCaretPos;	// start from top left
+//	DirectX::XMFLOAT2 nextPos = _StartPos > 0 ? m_TextfieldRectangles[_StartPos - 1].m_Geom.m_Pos : m_BeginCaretPos;	// start from top left
+	DirectX::XMFLOAT2 nextPos = DirectX::XMFLOAT2(m_BeginCaretPos.x, m_BeginCaretPos.y - m_BaselineCoeff);	// start from top left
 
-	for (UINT i = _StartPos > 0 ? _StartPos-1 : 0, ei = GetNumberOfChars(); i < ei; ++i)
+	for (UINT i = /*_StartPos > 0 ? _StartPos-1 : */0, ei = GetNumberOfChars(); i < ei; ++i)
 	{
 		DirectX::XMFLOAT2 pos = nextPos;
 
@@ -112,13 +111,16 @@ void TextField::RePositionCharacters(UINT _StartPos)
 
 		if (nextPos.x > 0)	// text field width reached, move to the next line
 		{
-			nextPos.x = m_LeftTextfieldSide;
+			nextPos.x = m_BeginCaretPos.x;
 			nextPos.y -= m_CharacterRowHeight;
 
 			pos = nextPos;
 
 			nextPos.x += (m_IntercharacterSpace + w);
 		}
+
+		// baseline
+		pos.y += m_BaselineCoeff * curChar.m_Baseline;	// move up from baseline
 
 		m_TextfieldRectangles[i].m_Geom.m_Pos = pos;
 
@@ -185,7 +187,7 @@ DirectX::XMFLOAT2 TextField::GetCaretPosByIndex(UINT _pos)
 
 		if (curPos.x > 0)	// text field width reached, move to the next line
 		{
-			curPos.x = m_LeftTextfieldSide + (m_IntercharacterSpace + w);
+			curPos.x = m_BeginCaretPos.x + (m_IntercharacterSpace + w);
 			curPos.y -= m_CharacterRowHeight;
 		}
 	}
@@ -199,7 +201,7 @@ DirectX::XMFLOAT2 TextField::GetCaretPosByIndex(UINT _pos)
 
 		if (curPos.x + (m_IntercharacterSpace + w) > 0)	// text field width reached, move to the next line
 		{
-			curPos.x = m_LeftTextfieldSide;
+			curPos.x = m_BeginCaretPos.x;
 			curPos.y -= m_CharacterRowHeight;
 		}
 	}

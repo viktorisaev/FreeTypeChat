@@ -376,7 +376,7 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 		m_FreeTypeRender.Initialize(48);
 
 
-		UpdateTexture(0x00BE);
+//		UpdateTexture(0x00BE);
 	});
 
 
@@ -419,6 +419,7 @@ GlyphInTexture FreeTypeChat::Sample3DSceneRenderer::UpdateTexture(UINT charCode)
 	m_FreeTypeRender.CreateGlyphBitmap(charCode);
 
 	std::pair<int, int> bitmapSize = m_FreeTypeRender.GetBitmapSize();
+	std::pair<int, int> bitmapOffset = m_FreeTypeRender.GetBitmapTopLeft();
 
 	int w = bitmapSize.first;// 20 + (rand() * 50) / (RAND_MAX + 1);
 	int h = bitmapSize.second;// 20 + (rand() * 50) / (RAND_MAX + 1);
@@ -519,7 +520,7 @@ GlyphInTexture FreeTypeChat::Sample3DSceneRenderer::UpdateTexture(UINT charCode)
 
 		Rectangle texCoord(DirectX::XMFLOAT2((float)x / (float)m_FontTextureSize.x, (float)y / (float)m_FontTextureSize.y), DirectX::XMFLOAT2((float)w / (float)m_FontTextureSize.x, (float)h / (float)m_FontTextureSize.y));
 
-		GlyphInTexture curGlyph(charCode, texCoord);
+		GlyphInTexture curGlyph(charCode, texCoord, bitmapOffset.first / 48.0f);	// TODO: use font parameters here
 
 		m_FreeTypeCacheVector.insert(ut, curGlyph);
 
@@ -652,6 +653,11 @@ GlyphInTexture Sample3DSceneRenderer::AddCharToCache(UINT charCode)
 DirectX::XMINT2 Sample3DSceneRenderer::GetFontTextureSize()
 {
 	return m_FontTextureSize;
+}
+
+Windows::Foundation::Size FreeTypeChat::Sample3DSceneRenderer::GetOutputSize()
+{
+	return m_deviceResources->GetOutputSize();
 }
 
 

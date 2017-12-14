@@ -55,9 +55,17 @@ void FreeTypeChatMain::Update()
 				m_InputQueue.pop();	// TODO: do not pop if not in cache
 
 				GlyphInTexture glyph;
-				if (!m_sceneRenderer->GetGlyph(key.m_CharCode, glyph))
+				if (key.m_CharCode != 32)
 				{
-					glyph = m_sceneRenderer->AddCharToCache(key.m_CharCode);
+					if (!m_sceneRenderer->GetGlyph(key.m_CharCode, glyph))
+					{
+						glyph = m_sceneRenderer->AddCharToCache(key.m_CharCode);
+					}
+				}
+				else
+				{
+					glyph.m_TexCoord.m_Size.x = 0.02f;	// TODO: put space for [SPACE] here depends on font
+					glyph.m_TexCoord.m_Size.y = 0.0f;
 				}
 				// glyph = glyph for key.m_CharCode
 
@@ -72,10 +80,17 @@ void FreeTypeChatMain::Update()
 
 				// TODO: set position in TextField
 
+				Windows::Foundation::Size windowSize = m_sceneRenderer->GetOutputSize();
+				float aspectRatio = windowSize.Width / windowSize.Height;
+
+				float hh = (h * 512.0f / 48.0f) * m_FontSizeCoeff * aspectRatio;
+				float ww = (w * 512.0f / 48.0f) * m_FontSizeCoeff;
+
 				Character c =
 				{
-					Rectangle(DirectX::XMFLOAT2(curPos.x, curPos.y), DirectX::XMFLOAT2(w, h)),
-					Rectangle(DirectX::XMFLOAT2(tx, ty), DirectX::XMFLOAT2(w, h))
+					Rectangle(DirectX::XMFLOAT2(0.0f, 0.0f), DirectX::XMFLOAT2(ww, hh)),
+					Rectangle(DirectX::XMFLOAT2(tx, ty), DirectX::XMFLOAT2(w, h)),
+					glyph.m_Baseline * aspectRatio
 				};
 
 				m_sceneRenderer->GetTextfield().AddCharacter(m_CursorIndex, c);

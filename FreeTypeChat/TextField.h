@@ -20,6 +20,7 @@ class Character
 public:
 	Rectangle m_Geom;
 	Rectangle m_Texture;
+	float m_Baseline;
 };
 
 
@@ -61,10 +62,10 @@ private:
 
 
 	// typing layout
-	DirectX::XMFLOAT2 m_BeginCaretPos;
+	DirectX::XMFLOAT2 m_BeginCaretPos{ -0.95f, 0.95f };
 	float m_CharacterRowHeight = 0.16f;
-	float m_LeftTextfieldSide = -0.95f;
-	float m_IntercharacterSpace = 0.009f;
+	float m_IntercharacterSpace = 0.007f;
+	float m_BaselineCoeff = 0.05f;
 
 };
 
