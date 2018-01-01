@@ -59,7 +59,7 @@ void FreeTypeChatMain::Update()
 				{
 					if (!m_sceneRenderer->GetGlyph(key.m_CharCode, glyph))
 					{
-						glyph = m_sceneRenderer->AddCharToCache(key.m_CharCode);
+						glyph = m_sceneRenderer->AddCharToCache(key.m_CharCode);	// TODO: do not wait on GPU main render
 					}
 				}
 				else

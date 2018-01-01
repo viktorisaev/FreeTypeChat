@@ -102,7 +102,7 @@ void CharCache::Initialize(const std::shared_ptr<DX::DeviceResources>& _DeviceRe
 		CD3DX12_CPU_DESCRIPTOR_HANDLE cpuTextureHandle(_TexHeap->GetCPUDescriptorHandleForHeapStart(), 0, m_cbvDescriptorSize);	// texture #0
 		d3dDevice->CreateShaderResourceView(m_CharCacheTexture.Get(), &textureViewDesc, cpuTextureHandle);
 
-		//			m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_Texture.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));	// later, after texture update
+		_CommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_CharCacheTexture.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));	// later, after texture update
 
 		delete[] textur;
 	}
@@ -117,14 +117,14 @@ void CharCache::Initialize(const std::shared_ptr<DX::DeviceResources>& _DeviceRe
 
 
 
-
+// TODO: do not wait GPU on main render
 GlyphInTexture CharCache::UpdateTexture(UINT charCode, const std::shared_ptr<DX::DeviceResources>& _DeviceResources, ID3D12GraphicsCommandList *_CommandList/*to be replaced by owned list and queue*/)
 {
 
 	// check if glyph already there
 	std::vector<GlyphInTexture>::const_iterator ut = m_FreeTypeCacheVector.end();
 	{
-//		std::lock_guard<std::mutex> locker_cache(m_FreeTypeCacheMutex);		// we are the only writers to the cache
+//		std::lock_guard<std::mutex> locker_cache(m_FreeTypeCacheMutex);		// we are the only writers to the cache, so reading could be without lock. Check lock on writing below.
 
 		GlyphInTexture curGlyph(charCode);
 
@@ -175,62 +175,65 @@ GlyphInTexture CharCache::UpdateTexture(UINT charCode, const std::shared_ptr<DX:
 
 	// update texture
 	DX::ThrowIfFailed(_CommandList->Reset(_DeviceResources->GetCommandAllocator(), nullptr));
+
+	D3D12_BOX box = {};
+	box.left = x;
+	box.top = y;
+	box.front = 0;
+
+	box.right = x + w;
+	box.bottom = y + h;
+	box.back = 1;
+
+
+	D3D12_TEXTURE_COPY_LOCATION copyLocation = {};
+	copyLocation.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+	copyLocation.SubresourceIndex = 0;
+	copyLocation.pResource = m_CharCacheTexture.Get();
+
+	D3D12_TEXTURE_COPY_LOCATION srcLocation = {};
+	srcLocation.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+	srcLocation.PlacedFootprint.Footprint.Width = m_FontTextureSize.x;
+	srcLocation.PlacedFootprint.Footprint.Height = m_FontTextureSize.y;
+	srcLocation.PlacedFootprint.Footprint.Depth = 1;
+	srcLocation.PlacedFootprint.Footprint.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	srcLocation.PlacedFootprint.Footprint.RowPitch = srcLocation.PlacedFootprint.Footprint.Width * 4;
+	srcLocation.PlacedFootprint.Offset = 0;
+	srcLocation.pResource = m_CharCacheUploadHeap.Get();
+
+	BYTE* pData;
+	DX::ThrowIfFailed(m_CharCacheUploadHeap->Map(0, NULL, reinterpret_cast<void**>(&pData)));
+
+	byte *glyph = m_FreeTypeRender.GetBitmap();
+
+	byte valr = 0xFF;
+	//byte valr = 10 + (rand() * (243)) / (RAND_MAX + 1);
+	//byte valg = 10 + (rand() * (243)) / (RAND_MAX + 1);
+	//byte valb = 10 + (rand() * (243)) / (RAND_MAX + 1);
+	//byte mult = 0 + (rand() * (255)) / (RAND_MAX + 1);
+
+	for (int i = 0, ei = h; i < ei; ++i)
 	{
-		D3D12_BOX box = {};
-		box.left = x;
-		box.top = y;
-		box.front = 0;
-
-		box.right = x + w;
-		box.bottom = y + h;
-		box.back = 1;
-
-
-		D3D12_TEXTURE_COPY_LOCATION copyLocation = {};
-		copyLocation.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-		copyLocation.SubresourceIndex = 0;
-		copyLocation.pResource = m_CharCacheTexture.Get();
-
-		D3D12_TEXTURE_COPY_LOCATION srcLocation = {};
-		srcLocation.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
-		srcLocation.PlacedFootprint.Footprint.Width = m_FontTextureSize.x;
-		srcLocation.PlacedFootprint.Footprint.Height = m_FontTextureSize.y;
-		srcLocation.PlacedFootprint.Footprint.Depth = 1;
-		srcLocation.PlacedFootprint.Footprint.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-		srcLocation.PlacedFootprint.Footprint.RowPitch = srcLocation.PlacedFootprint.Footprint.Width * 4;
-		srcLocation.PlacedFootprint.Offset = 0;
-		srcLocation.pResource = m_CharCacheUploadHeap.Get();
-
-		BYTE* pData;
-		DX::ThrowIfFailed(m_CharCacheUploadHeap->Map(0, NULL, reinterpret_cast<void**>(&pData)));
-
-		byte *glyph = m_FreeTypeRender.GetBitmap();
-
-		byte valr = 0xFF;
-		//byte valr = 10 + (rand() * (243)) / (RAND_MAX + 1);
-		//byte valg = 10 + (rand() * (243)) / (RAND_MAX + 1);
-		//byte valb = 10 + (rand() * (243)) / (RAND_MAX + 1);
-		//byte mult = 0 + (rand() * (255)) / (RAND_MAX + 1);
-
-		for (int i = 0, ei = h; i < ei; ++i)
+		for (int j = 0, ej = w; j < ej; ++j)
 		{
-			for (int j = 0, ej = w; j < ej; ++j)
-			{
-				pData[((y+i) * m_FontTextureSize.x + x+j) * 4 + 0] = valr;
-				pData[((y+i) * m_FontTextureSize.x + x+j) * 4 + 1] = valr;
-				pData[((y+i) * m_FontTextureSize.x + x+j) * 4 + 2] = valr;
-				pData[((y+i) * m_FontTextureSize.x + x+j) * 4 + 3] = glyph[i*w+j];
-			}
+			pData[((y+i) * m_FontTextureSize.x + x+j) * 4 + 0] = valr;
+			pData[((y+i) * m_FontTextureSize.x + x+j) * 4 + 1] = valr;
+			pData[((y+i) * m_FontTextureSize.x + x+j) * 4 + 2] = valr;
+			pData[((y+i) * m_FontTextureSize.x + x+j) * 4 + 3] = glyph[i*w+j];
 		}
-
-		m_CharCacheUploadHeap->Unmap(0, NULL);
-
-		_CommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_CharCacheTexture.Get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_COPY_DEST));
-
-		_CommandList->CopyTextureRegion(&copyLocation, x, y, 0, &srcLocation, &box);
 	}
 
+	m_CharCacheUploadHeap->Unmap(0, NULL);
+
+	PIXBeginEvent(_CommandList, 0, L"UpdateTexture");
+
+	_CommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_CharCacheTexture.Get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_COPY_DEST));
+
+	_CommandList->CopyTextureRegion(&copyLocation, x, y, 0, &srcLocation, &box);
+
 	_CommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_CharCacheTexture.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
+	PIXEndEvent(_CommandList);	// UpdateTexture
+
 
 	DX::ThrowIfFailed(_CommandList->Close());
 	ID3D12CommandList* ppCommandLists[] = { _CommandList };

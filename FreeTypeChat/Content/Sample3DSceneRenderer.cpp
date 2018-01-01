@@ -523,10 +523,10 @@ bool Sample3DSceneRenderer::Render()
 
 	PIXBeginEvent(m_commandList.Get(), 0, L"DrawGrid");
 	m_ScreenGrid.Render(m_commandList.Get());
-	PIXEndEvent(m_commandList.Get());	// cube
+	PIXEndEvent(m_commandList.Get());	// DrawGrid
 
 
-	PIXBeginEvent(m_commandList.Get(), 0, L"Draw the cube");
+	PIXBeginEvent(m_commandList.Get(), 0, L"DrawCharCacheTexture");
 	{
 
 		m_commandList->SetPipelineState(m_pipelineState.Get());
@@ -547,23 +547,26 @@ bool Sample3DSceneRenderer::Render()
 		m_commandList->IASetIndexBuffer(&m_indexBufferView);
 		m_commandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
 	}
-	PIXEndEvent(m_commandList.Get());	// cube
+	PIXEndEvent(m_commandList.Get());	// DrawCharCacheTexture
 
 	// text field. Reuse pipeline and texture
+	PIXBeginEvent(m_commandList.Get(), 0, L"DrawTextField");
 	m_TextField.Render(m_commandList.Get());
+	PIXEndEvent(m_commandList.Get());	// DrawTextField
 
 	// cursor
 	{
 		// heap is already setup
+		PIXBeginEvent(m_commandList.Get(), 0, L"DrawCursor");
 		m_Cursor.Render(m_texHeap.Get(), m_commandList.Get());
+		PIXEndEvent(m_commandList.Get());	// DrawCursor
 	}
-
 
 
 	// Indicate that the render target will now be used to present when the command list is done executing.
 	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_deviceResources->GetRenderTarget(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
 
-	PIXEndEvent(m_commandList.Get());	// frame
+	PIXEndEvent(m_commandList.Get());	// DrawFrame
 
 	DX::ThrowIfFailed(m_commandList->Close());
 
