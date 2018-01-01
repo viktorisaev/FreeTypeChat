@@ -52,17 +52,20 @@ namespace FreeTypeChat
 		CharCache();
 		~CharCache();
 		Concurrency::task<void> LoadCharCacheResources();
-		void Initialize(const std::shared_ptr<DX::DeviceResources>& _DeviceResources, ID3D12DescriptorHeap *_TexHeap, int _CharCacheTextureDescriptorIndex, UINT _FontSize, ID3D12GraphicsCommandList *_CommandList/*to be replaced by owned list and queue*/);
+		void Initialize(ID3D12Device* _d3dDevice, ID3D12DescriptorHeap *_TexHeap, int _CharCacheTextureDescriptorIndex, UINT _FontSize);
 //		void CreateWindowSizeDependentResources();
 //		CD3DX12_GPU_DESCRIPTOR_HANDLE SetHeapAndGetGPUHandleForCharCacheTexture(ID3D12GraphicsCommandList *_CommandList);	// HEAVY! SetDescriptorHeaps
-		GlyphInTexture UpdateTexture(UINT charCode, const std::shared_ptr<DX::DeviceResources>& _DeviceResources, ID3D12GraphicsCommandList *_CommandList/*to be replaced by owned list and queue*/);
+		GlyphInTexture UpdateTexture(UINT charCode);
 
 		bool GetGlyph(UINT charCode, GlyphInTexture& _Glyph);
 
+		DirectX::XMINT2 GetFontTextureSize();
 
-	private:
 
-	private:
+	private:	// func
+		void WaitForGpu();
+
+	private:	// data
 
 		FreeTypeRender m_FreeTypeRender;	// free type renderer
 
@@ -73,7 +76,15 @@ namespace FreeTypeChat
 //		static const UINT c_alignedConstantBufferSize = (sizeof(ModelViewProjectionConstantBuffer) + 255) & ~255;
 
 		// Direct3D resources for cube geometry.
-//		Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList>	m_CharCacheCommandList;
+		Microsoft::WRL::ComPtr<ID3D12CommandQueue>			m_CharCacheCommandQueue;
+		Microsoft::WRL::ComPtr<ID3D12CommandAllocator>		m_CharCacheCommandAllocator;
+		Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList>	m_CharCacheCommandList;
+
+		Microsoft::WRL::ComPtr<ID3D12Fence>				m_CharCacheFence;
+		UINT64											m_CharCacheFenceValue;
+		HANDLE											m_CharCacheFenceEvent;
+
+
 		Microsoft::WRL::ComPtr<ID3D12Resource>				m_CharCacheTexture;
 		UINT												m_cbvDescriptorSize;
 		Microsoft::WRL::ComPtr<ID3D12Resource>				m_CharCacheUploadHeap;

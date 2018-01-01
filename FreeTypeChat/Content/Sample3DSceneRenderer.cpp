@@ -285,7 +285,7 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 
 
 
-		m_CharCache.Initialize(m_deviceResources, m_texHeap.Get(), 0, 48, m_commandList.Get());
+		m_CharCache.Initialize(m_deviceResources->GetD3DDevice(), m_texHeap.Get(), 0, 48);
 
 		// Create vertex/index buffer views.
 		m_vertexBufferView.BufferLocation = m_vertexBuffer->GetGPUVirtualAddress();
@@ -420,7 +420,7 @@ GlyphInTexture Sample3DSceneRenderer::AddCharToCache(UINT _CharCode)
 {
 	if (m_loadingComplete)
 	{
-		return m_CharCache.UpdateTexture(_CharCode, m_deviceResources, m_commandList.Get());
+		return m_CharCache.UpdateTexture(_CharCode);
 	}
 	
 	return GlyphInTexture();

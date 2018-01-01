@@ -39,13 +39,23 @@ Concurrency::task<void> FreeTypeChat::CharCache::LoadCharCacheResources()
 
 
 
-void CharCache::Initialize(const std::shared_ptr<DX::DeviceResources>& _DeviceResources, ID3D12DescriptorHeap *_TexHeap, int _CharCacheTextureDescriptorIndex, UINT _FontSize, ID3D12GraphicsCommandList *_CommandList/*to be replaced by owned list and queue*/)
+void CharCache::Initialize(ID3D12Device* _d3dDevice, ID3D12DescriptorHeap *_TexHeap, int _CharCacheTextureDescriptorIndex, UINT _FontSize)
 {
-	auto d3dDevice = _DeviceResources->GetD3DDevice();
+	// Create a queue and a command list.
+	D3D12_COMMAND_QUEUE_DESC queueDesc = {};
+	queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+	queueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;	// use low-priority queue to update char cache texture
+	queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
 
-	// Create a command list.
-//	DX::ThrowIfFailed(d3dDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, _DeviceResources->GetCommandAllocator(), nullptr, IID_PPV_ARGS(&m_commandList)));
-//	NAME_D3D12_OBJECT(m_commandList);
+	DX::ThrowIfFailed(_d3dDevice->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&m_CharCacheCommandQueue)));
+	NAME_D3D12_OBJECT(m_CharCacheCommandQueue);
+
+	DX::ThrowIfFailed(_d3dDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_CharCacheCommandAllocator)));
+	NAME_D3D12_OBJECT(m_CharCacheCommandAllocator);
+
+	DX::ThrowIfFailed(_d3dDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_CharCacheCommandAllocator.Get(), nullptr, IID_PPV_ARGS(&m_CharCacheCommandList)));
+	NAME_D3D12_OBJECT(m_CharCacheCommandList);
+
 
 
 	CD3DX12_HEAP_PROPERTIES defaultHeapProperties(D3D12_HEAP_TYPE_DEFAULT);
@@ -64,11 +74,11 @@ void CharCache::Initialize(const std::shared_ptr<DX::DeviceResources>& _DeviceRe
 		desc.SampleDesc.Quality = 0;
 		desc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
 
-		DX::ThrowIfFailed(d3dDevice->CreateCommittedResource(&defaultHeapProperties, D3D12_HEAP_FLAG_NONE, &desc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&m_CharCacheTexture)));
+		DX::ThrowIfFailed(_d3dDevice->CreateCommittedResource(&defaultHeapProperties, D3D12_HEAP_FLAG_NONE, &desc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&m_CharCacheTexture)));
 		NAME_D3D12_OBJECT(m_CharCacheTexture);
 		const UINT64 uploadBufferSize = GetRequiredIntermediateSize(m_CharCacheTexture.Get(), 0, 1);
 
-		DX::ThrowIfFailed(d3dDevice->CreateCommittedResource(&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD), D3D12_HEAP_FLAG_NONE, &CD3DX12_RESOURCE_DESC::Buffer(uploadBufferSize), D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(m_CharCacheUploadHeap.GetAddressOf())));
+		DX::ThrowIfFailed(_d3dDevice->CreateCommittedResource(&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD), D3D12_HEAP_FLAG_NONE, &CD3DX12_RESOURCE_DESC::Buffer(uploadBufferSize), D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(m_CharCacheUploadHeap.GetAddressOf())));
 		NAME_D3D12_OBJECT(m_CharCacheUploadHeap);
 
 		D3D12_SUBRESOURCE_DATA subData = {};
@@ -89,7 +99,7 @@ void CharCache::Initialize(const std::shared_ptr<DX::DeviceResources>& _DeviceRe
 		subData.RowPitch = 4 * m_FontTextureSize.x;
 		subData.SlicePitch = m_FontTextureSize.y * subData.RowPitch;
 
-		UpdateSubresources(_CommandList, m_CharCacheTexture.Get(), m_CharCacheUploadHeap.Get(), 0, 0, 1, &subData);
+		UpdateSubresources(m_CharCacheCommandList.Get(), m_CharCacheTexture.Get(), m_CharCacheUploadHeap.Get(), 0, 0, 1, &subData);
 
 
 		D3D12_SHADER_RESOURCE_VIEW_DESC textureViewDesc = {};
@@ -100,14 +110,25 @@ void CharCache::Initialize(const std::shared_ptr<DX::DeviceResources>& _DeviceRe
 		textureViewDesc.Texture2D.MipLevels = 1;
 
 		CD3DX12_CPU_DESCRIPTOR_HANDLE cpuTextureHandle(_TexHeap->GetCPUDescriptorHandleForHeapStart(), 0, m_cbvDescriptorSize);	// texture #0
-		d3dDevice->CreateShaderResourceView(m_CharCacheTexture.Get(), &textureViewDesc, cpuTextureHandle);
+		_d3dDevice->CreateShaderResourceView(m_CharCacheTexture.Get(), &textureViewDesc, cpuTextureHandle);
 
-		_CommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_CharCacheTexture.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));	// later, after texture update
+		m_CharCacheCommandList.Get()->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_CharCacheTexture.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));	// later, after texture update
 
 		delete[] textur;
 	}
 
+	m_CharCacheFenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+	m_CharCacheFenceValue = 0;
+	DX::ThrowIfFailed(_d3dDevice->CreateFence(m_CharCacheFenceValue, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_CharCacheFence)));
+
 	m_FreeTypeRender.Initialize(_FontSize);
+
+	// transfer
+	DX::ThrowIfFailed(m_CharCacheCommandList.Get()->Close());
+	ID3D12CommandList* ppCommandLists[] = { m_CharCacheCommandList.Get() };
+	m_CharCacheCommandQueue.Get()->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
+
+	WaitForGpu();	// wait for the texture transfer to complete
 }
 
 
@@ -118,7 +139,7 @@ void CharCache::Initialize(const std::shared_ptr<DX::DeviceResources>& _DeviceRe
 
 
 // TODO: do not wait GPU on main render
-GlyphInTexture CharCache::UpdateTexture(UINT charCode, const std::shared_ptr<DX::DeviceResources>& _DeviceResources, ID3D12GraphicsCommandList *_CommandList/*to be replaced by owned list and queue*/)
+GlyphInTexture CharCache::UpdateTexture(UINT charCode)
 {
 
 	// check if glyph already there
@@ -174,7 +195,7 @@ GlyphInTexture CharCache::UpdateTexture(UINT charCode, const std::shared_ptr<DX:
 
 
 	// update texture
-	DX::ThrowIfFailed(_CommandList->Reset(_DeviceResources->GetCommandAllocator(), nullptr));
+	DX::ThrowIfFailed(m_CharCacheCommandList->Reset(m_CharCacheCommandAllocator.Get(), nullptr));
 
 	D3D12_BOX box = {};
 	box.left = x;
@@ -225,22 +246,21 @@ GlyphInTexture CharCache::UpdateTexture(UINT charCode, const std::shared_ptr<DX:
 
 	m_CharCacheUploadHeap->Unmap(0, NULL);
 
-	PIXBeginEvent(_CommandList, 0, L"UpdateTexture");
+	PIXBeginEvent(m_CharCacheCommandList.Get(), 0, L"UpdateTexture");
 
-	_CommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_CharCacheTexture.Get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_COPY_DEST));
+	m_CharCacheCommandList.Get()->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_CharCacheTexture.Get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_COPY_DEST));
 
-	_CommandList->CopyTextureRegion(&copyLocation, x, y, 0, &srcLocation, &box);
+	m_CharCacheCommandList.Get()->CopyTextureRegion(&copyLocation, x, y, 0, &srcLocation, &box);
 
-	_CommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_CharCacheTexture.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
-	PIXEndEvent(_CommandList);	// UpdateTexture
+	m_CharCacheCommandList.Get()->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_CharCacheTexture.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
+	PIXEndEvent(m_CharCacheCommandList.Get());	// UpdateTexture
 
 
-	DX::ThrowIfFailed(_CommandList->Close());
-	ID3D12CommandList* ppCommandLists[] = { _CommandList };
-	ppCommandLists[0] = _CommandList;
-	_DeviceResources->GetCommandQueue()->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
+	DX::ThrowIfFailed(m_CharCacheCommandList.Get()->Close());
+	ID3D12CommandList* ppCommandLists[] = { m_CharCacheCommandList.Get() };
+	m_CharCacheCommandQueue.Get()->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
-	_DeviceResources->WaitForGpu();
+	WaitForGpu();	// wait for the texture transfer to complete
 
 	// add item to cache
 	{
@@ -256,6 +276,25 @@ GlyphInTexture CharCache::UpdateTexture(UINT charCode, const std::shared_ptr<DX:
 	}	// mem release semantic
 
 }
+
+
+
+
+
+// Wait for pending GPU work to complete.
+void CharCache::WaitForGpu()
+{
+	// Schedule a Signal command in the queue.
+	DX::ThrowIfFailed(m_CharCacheCommandQueue.Get()->Signal(m_CharCacheFence.Get(), m_CharCacheFenceValue));
+
+	// Wait until the fence has been crossed.
+	DX::ThrowIfFailed(m_CharCacheFence->SetEventOnCompletion(m_CharCacheFenceValue, m_CharCacheFenceEvent));
+	WaitForSingleObjectEx(m_CharCacheFenceEvent, INFINITE, FALSE);
+
+	// Increment the fence value for the current frame.
+	m_CharCacheFenceValue++;
+}
+
 
 
 
@@ -288,28 +327,7 @@ bool CharCache::GetGlyph(UINT charCode, GlyphInTexture & _Glyph)
 
 
 
-
-//DirectX::XMINT2 CharCache::GetFontTextureSize()
-//{
-//	return m_FontTextureSize;
-//}
-
-
-
-
-
-
-
-
-
-// Renders one frame using the vertex and pixel shaders.
-//CD3DX12_GPU_DESCRIPTOR_HANDLE CharCache::SetHeapAndGetGPUHandleForCharCacheTexture(ID3D12GraphicsCommandList *_CommandList)
-//{
-//		ID3D12DescriptorHeap* ppHeaps[] = { m_CharCacheHeap.Get() };
-//		_CommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);	// HEAVYY!!!
-//
-//		// texture
-//		CD3DX12_GPU_DESCRIPTOR_HANDLE gpuHandle(m_CharCacheHeap->GetGPUDescriptorHandleForHeapStart(), 0/*m_deviceResources->GetCurrentFrameIndex()*/, m_cbvDescriptorSize);
-//
-//		return gpuHandle;
-//}
+DirectX::XMINT2 CharCache::GetFontTextureSize()
+{
+	return m_FontTextureSize;
+}
