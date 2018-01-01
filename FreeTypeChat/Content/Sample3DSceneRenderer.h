@@ -7,43 +7,10 @@
 #include "FreeTypeRender.h"
 #include "Cursor.h"
 #include "TextField.h"
+#include "CharCache.h"
 
 namespace FreeTypeChat
 {
-
-
-	class GlyphInTexture
-	{
-	public:
-		GlyphInTexture() :
-			m_CharCode(0)
-			, m_TexCoord()
-			, m_Baseline(0.0f)
-		{}
-
-		GlyphInTexture(UINT _CharCode, Rectangle _TexCoord, float _Baseline) :
-			m_CharCode(_CharCode)
-			, m_TexCoord(_TexCoord)
-			, m_Baseline(_Baseline)
-		{}
-
-		GlyphInTexture(UINT _CharCode) :
-			  m_CharCode(_CharCode)
-			, m_TexCoord()
-			, m_Baseline(0.0f)
-		{}
-
-		bool operator<(const GlyphInTexture& _other)
-		{
-			return this->m_CharCode < _other.m_CharCode;
-		}
-
-
-	public:
-		UINT m_CharCode;
-		Rectangle m_TexCoord;
-		float m_Baseline;
-	};
 
 
 
@@ -66,7 +33,7 @@ namespace FreeTypeChat
 		TextField&	GetTextfield() { return m_TextField; }
 
 		bool GetGlyph(UINT charCode, GlyphInTexture& _Glyph);
-		DirectX::XMINT2 GetFontTextureSize();
+//		DirectX::XMINT2 GetFontTextureSize();
 
 		Windows::Foundation::Size GetOutputSize();
 
@@ -74,11 +41,9 @@ namespace FreeTypeChat
 	private:
 		void LoadState();
 		void Rotate(float radians);
-		GlyphInTexture UpdateTexture(UINT charCode);
 
 	private:
 
-		const DirectX::XMINT2 m_FontTextureSize { 512, 512 };
 
 
 		// Constant buffers must be 256-byte aligned.
@@ -97,11 +62,6 @@ namespace FreeTypeChat
 		Microsoft::WRL::ComPtr<ID3D12Resource>				m_vertexBuffer;
 		Microsoft::WRL::ComPtr<ID3D12Resource>				m_indexBuffer;
 
-		Microsoft::WRL::ComPtr<ID3D12Resource>				m_Texture;
-
-//		Microsoft::WRL::ComPtr<ID3D12Resource>				m_constantBuffer;
-//		ModelViewProjectionConstantBuffer					m_constantBufferData;
-//		UINT8*												m_mappedConstantBuffer;
 		UINT												m_cbvDescriptorSize;
 
 		D3D12_RECT											m_scissorRect;
@@ -110,10 +70,7 @@ namespace FreeTypeChat
 		D3D12_VERTEX_BUFFER_VIEW							m_vertexBufferView;
 		D3D12_INDEX_BUFFER_VIEW								m_indexBufferView;
 
-		Microsoft::WRL::ComPtr<ID3D12Resource>				m_UploadHeap;
-
-		Microsoft::WRL::ComPtr<ID3D12Resource>				m_GridVertexBuffer;
-		D3D12_VERTEX_BUFFER_VIEW							m_GridVertexBufferView;
+//		Microsoft::WRL::ComPtr<ID3D12Resource>				m_UploadHeap;
 
 		// Variables used with the rendering loop.
 		bool	m_loadingComplete;
@@ -123,14 +80,7 @@ namespace FreeTypeChat
 		ScreenGrid m_ScreenGrid;
 		Cursor		m_Cursor;
 		TextField	m_TextField;
-		FreeTypeRender m_FreeTypeRender;
-
-		// TODO: move to glyph texture render
-		DirectX::XMINT2		m_NextGlyphPos;
-
-		std::mutex m_FreeTypeCacheMutex;
-		std::vector<GlyphInTexture> m_FreeTypeCacheVector;				// current characters cache (all used characters)
-
+		CharCache m_CharCache;
 	};
 }
 

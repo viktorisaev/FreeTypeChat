@@ -82,6 +82,9 @@
     <ClCompile Include="TextField.cpp">
       <Filter>Content</Filter>
     </ClCompile>
+    <ClCompile Include="CharCache.cpp">
+      <Filter>Content</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App.h" />
@@ -97,6 +100,9 @@
       <Filter>Content</Filter>
     </ClInclude>
     <ClInclude Include="TextField.h">
+      <Filter>Content</Filter>
+    </ClInclude>
+    <ClInclude Include="CharCache.h">
       <Filter>Content</Filter>
     </ClInclude>
   </ItemGroup>

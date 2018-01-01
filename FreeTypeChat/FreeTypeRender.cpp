@@ -29,7 +29,6 @@ static FT_Error get_face(FT_Face*  m_Face);
 */
 
 #define CACHE_SIZE  1024
-#define BENCH_TIME  2.0
 
 
 static FT_Library        lib;
@@ -74,18 +73,18 @@ static const char*  bench_desc[] =
 static int    preload;
 static char*  filename;
 
-static unsigned int  first_index;
+static UINT  first_index;
 
 static FT_Render_Mode  render_mode = FT_RENDER_MODE_NORMAL;
 static FT_Int32        load_flags = FT_LOAD_DEFAULT;
 
-static unsigned int  tt_interpreter_versions[3];
-static int           num_tt_interpreter_versions;
-static unsigned int  dflt_tt_interpreter_version;
+static UINT  tt_interpreter_versions[3];
+static int   num_tt_interpreter_versions;
+static UINT  dflt_tt_interpreter_version;
 
-static unsigned int  cff_hinting_engines[2];
-static int           num_cff_hinting_engines;
-static unsigned int  dflt_cff_hinting_engine;
+static UINT  cff_hinting_engines[2];
+static int   num_cff_hinting_engines;
+static UINT  dflt_cff_hinting_engine;
 
 static char  cff_hinting_engine_names[2][10] = { "freetype", "adobe" };
 
@@ -119,13 +118,13 @@ void FreeTypeRender::RenderGlyph(FT_Face m_Face, UINT _charCode)
 int FreeTypeRender::test_get_glyph(FT_Face m_Face, void* user_data)
 {
 	FT_Glyph      glyph;
-	unsigned int  i;
+	UINT  i;
 	int           done = 0;
 
 	FT_UNUSED(user_data);
 
 
-	for (i = first_index; i < (unsigned int)m_Face->num_glyphs; i++)
+	for (i = first_index; i < (UINT)m_Face->num_glyphs; i++)
 	{
 		if (FT_Load_Glyph(m_Face, i, load_flags))
 			continue;
@@ -145,13 +144,13 @@ int FreeTypeRender::test_get_cbox(FT_Face    m_Face, void*      user_data)
 {
 	FT_Glyph      glyph;
 	FT_BBox       bbox;
-	unsigned int  i;
+	UINT  i;
 	int           done = 0;
 
 	FT_UNUSED(user_data);
 
 
-	for (i = first_index; i < (unsigned int)m_Face->num_glyphs; i++)
+	for (i = first_index; i < (UINT)m_Face->num_glyphs; i++)
 	{
 		if (FT_Load_Glyph(m_Face, i, load_flags))
 			continue;
@@ -172,14 +171,14 @@ int FreeTypeRender::test_get_cbox(FT_Face    m_Face, void*      user_data)
 int FreeTypeRender::test_get_bbox(FT_Face m_Face, void* user_data)
 {
 	FT_BBox       bbox;
-	unsigned int  i;
+	UINT  i;
 	int           done = 0;
 	FT_Matrix     rot30 = { 0xDDB4, -0x8000, 0x8000, 0xDDB4 };
 
 	FT_UNUSED(user_data);
 
 
-	for (i = first_index; i < (unsigned int)m_Face->num_glyphs; i++)
+	for (i = first_index; i < (UINT)m_Face->num_glyphs; i++)
 	{
 		FT_Outline*  outline;
 
@@ -220,7 +219,7 @@ int FreeTypeRender::test_get_char_index(FT_Face m_Face,	void* user_data)
 int FreeTypeRender::test_image_cache(FT_Face m_Face, void* user_data)
 {
 	FT_Glyph      glyph;
-	unsigned int  i;
+	UINT  i;
 	int           done = 0;
 
 	FT_UNUSED(user_data);
@@ -232,7 +231,7 @@ int FreeTypeRender::test_image_cache(FT_Face m_Face, void* user_data)
 			return 0;
 	}
 
-	for (i = first_index; i < (unsigned int)m_Face->num_glyphs; i++)
+	for (i = first_index; i < (UINT)m_Face->num_glyphs; i++)
 	{
 		if (!FTC_ImageCache_Lookup(image_cache, &font_type, i, &glyph, NULL))
 		{
@@ -278,11 +277,11 @@ void FreeTypeRender::get_charset(FT_Face m_Face, bcharset_t*  charset)
 	}
 	else
 	{
-		unsigned int  j;
+		UINT  j;
 
 
 		/* no charmap, do an identity mapping */
-		for (i = 0, j = first_index; j < (unsigned int)m_Face->num_glyphs; i++, j++)
+		for (i = 0, j = first_index; j < (UINT)m_Face->num_glyphs; i++, j++)
 		{
 			charset->code[i] = j;
 		}
@@ -431,17 +430,13 @@ int FreeTypeRender::Initialize(UINT _FontSize)
 	unsigned long  max_bytes = CACHE_SIZE * 1024;
 	char*          test_string = NULL;
 	int            max_iter = 0;
-	double         max_time = BENCH_TIME;
 	int            compare_cached = 0;
 	int            j;
 
-	unsigned int  versions[3] = { TT_INTERPRETER_VERSION_35,
-		TT_INTERPRETER_VERSION_38,
-		TT_INTERPRETER_VERSION_40 };
-	unsigned int  engines[2] = { FT_CFF_HINTING_FREETYPE,
-		FT_CFF_HINTING_ADOBE };
-	int           version;
-	char         *engine;
+	UINT versions[3] = { TT_INTERPRETER_VERSION_35, TT_INTERPRETER_VERSION_38, TT_INTERPRETER_VERSION_40 };
+	UINT  engines[2] = { FT_CFF_HINTING_FREETYPE, FT_CFF_HINTING_ADOBE };
+	int version;
+	char *engine;
 
 
 	if (FT_Init_FreeType(&lib))
@@ -452,14 +447,16 @@ int FreeTypeRender::Initialize(UINT _FontSize)
 	}
 
 
-	/* collect all available versions, then set again the default */
+	// collect all available versions, then set again the default
 	FT_Property_Get(lib, "truetype", "interpreter-version", &dflt_tt_interpreter_version);
 
 	for (j = 0; j < 3; j++)
 	{
 		error = FT_Property_Set(lib, "truetype", "interpreter-version", &versions[j]);
 		if (!error)
+		{
 			tt_interpreter_versions[num_tt_interpreter_versions++] = versions[j];
+		}
 	}
 	FT_Property_Set(lib, "truetype", "interpreter-version", &dflt_tt_interpreter_version);
 
@@ -469,10 +466,11 @@ int FreeTypeRender::Initialize(UINT _FontSize)
 	{
 		error = FT_Property_Set(lib, "cff", "hinting-engine", &engines[j]);
 		if (!error)
+		{
 			cff_hinting_engines[num_cff_hinting_engines++] = engines[j];
+		}
 	}
 	FT_Property_Set(lib, "cff", "hinting-engine", &dflt_cff_hinting_engine);
-
 
 	version = (int)dflt_tt_interpreter_version;
 	engine = cff_hinting_engine_names[dflt_cff_hinting_engine];
@@ -551,7 +549,7 @@ int FreeTypeRender::Initialize(UINT _FontSize)
 //
 //
 //			//if (fi > 0)
-//			//	first_index = (unsigned int)fi;
+//			//	first_index = (UINT)fi;
 //		}
 //		break;
 //
@@ -578,7 +576,7 @@ int FreeTypeRender::Initialize(UINT _FontSize)
 //
 //
 //			//if (mb > 0)
-//			//	max_bytes = (unsigned int)mb * 1024;
+//			//	max_bytes = (UINT)mb * 1024;
 //		}
 //		break;
 //
@@ -607,7 +605,7 @@ int FreeTypeRender::Initialize(UINT _FontSize)
 //			//if (sz < 0)
 //			//	size = 1;
 //			//else
-//			//	size = (unsigned int)sz;
+//			//	size = (UINT)sz;
 //		}
 //		break;
 //
@@ -661,7 +659,7 @@ int FreeTypeRender::Initialize(UINT _FontSize)
 		}
 		else
 		{
-			_FontSize = (unsigned int)m_Face->available_sizes[0].size >> 6;
+			_FontSize = (UINT)m_Face->available_sizes[0].size >> 6;
 			fprintf(stderr,
 				"using size of first bitmap strike (%dpx)\n", _FontSize);
 			FT_Select_Size(m_Face, 0);

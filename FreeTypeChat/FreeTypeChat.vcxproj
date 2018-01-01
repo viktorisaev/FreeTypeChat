@@ -216,6 +216,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App.h" />
+    <ClInclude Include="CharCache.h" />
     <ClInclude Include="Common\d3dx12.h" />
     <ClInclude Include="Common\DeviceResources.h" />
     <ClInclude Include="Cursor.h" />
@@ -231,6 +232,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="App.cpp" />
+    <ClCompile Include="CharCache.cpp" />
     <ClCompile Include="Common\DeviceResources.cpp" />
     <ClCompile Include="Cursor.cpp" />
     <ClCompile Include="FreeTypeChatMain.cpp" />

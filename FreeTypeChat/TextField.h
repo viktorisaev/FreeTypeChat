@@ -63,8 +63,8 @@ private:
 
 	// typing layout
 	DirectX::XMFLOAT2 m_BeginCaretPos{ -0.95f, 0.95f };
-	float m_CharacterRowHeight = 0.16f;
-	float m_IntercharacterSpace = 0.007f;
+	float m_CharacterRowHeight = 0.13f;
+	float m_IntercharacterSpace = 0.004f;
 	float m_BaselineCoeff = 0.05f;
 
 };

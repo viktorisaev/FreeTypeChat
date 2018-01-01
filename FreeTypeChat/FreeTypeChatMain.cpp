@@ -72,7 +72,6 @@ void FreeTypeChatMain::Update()
 				m_sceneRenderer->GetCursor().ResetBlink(m_timer.GetTotalSeconds());
 
 				// type to textfield
-//				DirectX::XMINT2 fontTexSize = m_sceneRenderer->GetFontTextureSize();
 				float tx = glyph.m_TexCoord.m_Pos.x;
 				float ty = glyph.m_TexCoord.m_Pos.y;
 				float w = glyph.m_TexCoord.m_Size.x;
