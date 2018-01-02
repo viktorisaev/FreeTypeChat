@@ -54,7 +54,6 @@ namespace FreeTypeChat
 		Concurrency::task<void> LoadCharCacheResources();
 		void Initialize(ID3D12Device* _d3dDevice, ID3D12DescriptorHeap *_TexHeap, int _CharCacheTextureDescriptorIndex, UINT _FontSize);
 //		void CreateWindowSizeDependentResources();
-//		CD3DX12_GPU_DESCRIPTOR_HANDLE SetHeapAndGetGPUHandleForCharCacheTexture(ID3D12GraphicsCommandList *_CommandList);	// HEAVY! SetDescriptorHeaps
 		GlyphInTexture UpdateTexture(UINT charCode);
 
 		bool GetGlyph(UINT charCode, GlyphInTexture& _Glyph);
@@ -71,9 +70,6 @@ namespace FreeTypeChat
 
 		const DirectX::XMINT2 m_FontTextureSize { 512, 512 };
 
-
-		// Constant buffers must be 256-byte aligned.
-//		static const UINT c_alignedConstantBufferSize = (sizeof(ModelViewProjectionConstantBuffer) + 255) & ~255;
 
 		// Direct3D resources for cube geometry.
 		Microsoft::WRL::ComPtr<ID3D12CommandQueue>			m_CharCacheCommandQueue;
@@ -93,6 +89,8 @@ namespace FreeTypeChat
 
 		std::mutex m_FreeTypeCacheMutex;
 		std::vector<GlyphInTexture> m_FreeTypeCacheVector;				// current characters cache (all used characters)
+
+		float m_FontSize;	// set during initialization
 	};
 }
 

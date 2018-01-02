@@ -41,6 +41,8 @@ Concurrency::task<void> FreeTypeChat::CharCache::LoadCharCacheResources()
 
 void CharCache::Initialize(ID3D12Device* _d3dDevice, ID3D12DescriptorHeap *_TexHeap, int _CharCacheTextureDescriptorIndex, UINT _FontSize)
 {
+	m_FontSize = (float)_FontSize;
+
 	// Create a queue and a command list.
 	D3D12_COMMAND_QUEUE_DESC queueDesc = {};
 	queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
@@ -121,7 +123,7 @@ void CharCache::Initialize(ID3D12Device* _d3dDevice, ID3D12DescriptorHeap *_TexH
 	m_CharCacheFenceValue = 0;
 	DX::ThrowIfFailed(_d3dDevice->CreateFence(m_CharCacheFenceValue, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_CharCacheFence)));
 
-	m_FreeTypeRender.Initialize(_FontSize);
+	m_FreeTypeRender.Initialize((UINT)m_FontSize);
 
 	// transfer
 	DX::ThrowIfFailed(m_CharCacheCommandList.Get()->Close());
@@ -176,7 +178,7 @@ GlyphInTexture CharCache::UpdateTexture(UINT charCode)
 	{
 		// new line
 		nextPos.x = 0;
-		nextPos.y += 48;
+		nextPos.y += (int32_t)m_FontSize;
 
 		m_NextGlyphPos = nextPos;
 
@@ -228,10 +230,6 @@ GlyphInTexture CharCache::UpdateTexture(UINT charCode)
 	byte *glyph = m_FreeTypeRender.GetBitmap();
 
 	byte valr = 0xFF;
-	//byte valr = 10 + (rand() * (243)) / (RAND_MAX + 1);
-	//byte valg = 10 + (rand() * (243)) / (RAND_MAX + 1);
-	//byte valb = 10 + (rand() * (243)) / (RAND_MAX + 1);
-	//byte mult = 0 + (rand() * (255)) / (RAND_MAX + 1);
 
 	for (int i = 0, ei = h; i < ei; ++i)
 	{
@@ -268,7 +266,7 @@ GlyphInTexture CharCache::UpdateTexture(UINT charCode)
 
 		Rectangle texCoord(DirectX::XMFLOAT2((float)x / (float)m_FontTextureSize.x, (float)y / (float)m_FontTextureSize.y), DirectX::XMFLOAT2((float)w / (float)m_FontTextureSize.x, (float)h / (float)m_FontTextureSize.y));
 
-		GlyphInTexture curGlyph(charCode, texCoord, bitmapOffset.first / 48.0f);	// TODO: use font parameters here
+		GlyphInTexture curGlyph(charCode, texCoord, bitmapOffset.first / m_FontSize);	// TODO: use font parameters here
 
 		m_FreeTypeCacheVector.insert(ut, curGlyph);
 

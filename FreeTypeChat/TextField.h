@@ -15,13 +15,21 @@ namespace FreeTypeChat
 
 
 
+class CharGlyphInTexture
+{
+public:
+	Rectangle m_Texture;
+	float m_Baseline;
+};
+
+
 class Character
 {
 public:
 	Rectangle m_Geom;
-	Rectangle m_Texture;
-	float m_Baseline;
+	CharGlyphInTexture m_GlyphInTexture;
 };
+
 
 
 class TextField
@@ -30,13 +38,13 @@ public:
 	TextField();
 	~TextField();
 
-	void InitializeTextfield(const std::shared_ptr<DX::DeviceResources>& _DeviceResources);
+	void InitializeTextfield(const std::shared_ptr<DX::DeviceResources>& _DeviceResources, float _LineHeihgtInNormScreen, float _TextureToScreenRatio);
 
 	void Update();
 
 	void Render(ID3D12GraphicsCommandList *_CommandList);
 
-	void AddCharacter(UINT _Pos, Character _Char);
+	void AddCharacter(UINT _Pos, CharGlyphInTexture _Char);
 	void DeleteCharacter(UINT _Pos);
 
 	UINT GetNumberOfChars() { return m_TextfieldRectangles.size(); }
@@ -63,9 +71,12 @@ private:
 
 	// typing layout
 	DirectX::XMFLOAT2 m_BeginCaretPos{ -0.95f, 0.95f };
-	float m_CharacterRowHeight = 0.13f;
-	float m_IntercharacterSpace = 0.004f;
-	float m_BaselineCoeff = 0.05f;
+	float m_CharacterRowHeight = 1.1f;	// coeff of interline interval
+	float m_IntercharacterSpace = 0.017f;	// coeff of inter-character space related to m_TextLineHeightInNormScreen
+	float m_TextLineHeightInNormScreen;	// height of one line of text in normalized screen coords [-1..1]
+	float m_TextureToScreenRatio;	// coeff to convert texture sizes to screen sizes [0..1]  HARDCODED!!!
+	float m_BaseLineRatio = 0.83f;	// base line as part of the full char height
+	float m_FontAspectRatio = 0.5f;	// depends on output area: multiplier for width against height
 
 };
 

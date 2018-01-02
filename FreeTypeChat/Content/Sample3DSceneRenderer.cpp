@@ -284,8 +284,7 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 		//// We don't unmap this until the app closes. Keeping things mapped for the lifetime of the resource is okay.
 
 
-
-		m_CharCache.Initialize(m_deviceResources->GetD3DDevice(), m_texHeap.Get(), 0, 48);
+		m_CharCache.Initialize(m_deviceResources->GetD3DDevice(), m_texHeap.Get(), 0, m_FontSize);
 
 		// Create vertex/index buffer views.
 		m_vertexBufferView.BufferLocation = m_vertexBuffer->GetGPUVirtualAddress();
@@ -300,10 +299,12 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 		m_ScreenGrid.InitializeGrid(m_deviceResources, m_commandList.Get(), N_GRID_VERT, N_GRID_HORZ);
 
 		// cursor
-		m_Cursor.InitializeCursor(m_deviceResources, m_texHeap.Get(), m_commandList.Get(), DirectX::XMFLOAT2(0.008f, 0.15f), 0.5 );
+		m_Cursor.InitializeCursor(m_deviceResources, m_texHeap.Get(), m_commandList.Get(), DirectX::XMFLOAT2(m_TextLinwHeightInNormScreen * 0.04f, m_TextLinwHeightInNormScreen), 0.5 );
 
 		// text field
-		m_TextField.InitializeTextfield(m_deviceResources);
+		DirectX::XMINT2 charTexSize = m_CharCache.GetFontTextureSize();
+		float textureToScreenRatio = (float)charTexSize.y / (float)m_FontSize;
+		m_TextField.InitializeTextfield(m_deviceResources, m_TextLinwHeightInNormScreen, textureToScreenRatio);
 
 		// Close the command list and execute it to begin the vertex/index buffer copy into the GPU's default heap.
 		DX::ThrowIfFailed(m_commandList->Close());
@@ -412,6 +413,13 @@ bool Sample3DSceneRenderer::GetGlyph(UINT _CharCode, GlyphInTexture & _Glyph)
 }
 
 
+
+
+
+//DirectX::XMINT2 Sample3DSceneRenderer::GetFontTextureSize()
+//{
+//	return m_CharCache.GetFontTextureSize();
+//}
 
 
 

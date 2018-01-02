@@ -58,7 +58,5 @@ namespace FreeTypeChat
 		std::queue<KeyPressed, std::deque<KeyPressed>> m_InputQueue;		// typed characters to be processed
 
 		UINT	m_CursorIndex;	// 0-based index of the cursor position in the input string
-
-		const float m_FontSizeCoeff = 0.05f;
 	};
 }

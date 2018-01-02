@@ -55,7 +55,7 @@ void FreeTypeChatMain::Update()
 				m_InputQueue.pop();	// TODO: do not pop if not in cache
 
 				GlyphInTexture glyph;
-				if (key.m_CharCode != 32)
+				if (key.m_CharCode != ' ')	// [SPACE]
 				{
 					if (!m_sceneRenderer->GetGlyph(key.m_CharCode, glyph))
 					{
@@ -77,19 +77,13 @@ void FreeTypeChatMain::Update()
 				float w = glyph.m_TexCoord.m_Size.x;
 				float h = glyph.m_TexCoord.m_Size.y;
 
-				// TODO: set position in TextField
-
 				Windows::Foundation::Size windowSize = m_sceneRenderer->GetOutputSize();
 				float aspectRatio = windowSize.Width / windowSize.Height;
 
-				float hh = (h * 512.0f / 48.0f) * m_FontSizeCoeff * aspectRatio;
-				float ww = (w * 512.0f / 48.0f) * m_FontSizeCoeff;
-
-				Character c =
+				CharGlyphInTexture c =
 				{
-					Rectangle(DirectX::XMFLOAT2(0.0f, 0.0f), DirectX::XMFLOAT2(ww, hh)),
 					Rectangle(DirectX::XMFLOAT2(tx, ty), DirectX::XMFLOAT2(w, h)),
-					glyph.m_Baseline * aspectRatio
+					glyph.m_Baseline
 				};
 
 				m_sceneRenderer->GetTextfield().AddCharacter(m_CursorIndex, c);
@@ -154,7 +148,7 @@ void FreeTypeChatMain::Update()
 
 		}
 
-		m_sceneRenderer->GetCursor().Update(m_timer.GetTotalSeconds(), DirectX::XMFLOAT2(curPos.x, curPos.y + 0.03f));
+		m_sceneRenderer->GetCursor().UpdateCursor(m_timer.GetTotalSeconds(), DirectX::XMFLOAT2(curPos.x, curPos.y));
 
 		m_sceneRenderer->Update(m_timer);
 	});

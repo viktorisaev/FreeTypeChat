@@ -24,8 +24,10 @@ TextField::~TextField()
 
 
 
-void TextField::InitializeTextfield(const std::shared_ptr<DX::DeviceResources>& _DeviceResources)
+void TextField::InitializeTextfield(const std::shared_ptr<DX::DeviceResources>& _DeviceResources, float _LineHeihgtInNormScreen, float _TextureToScreenRatio)
 {
+	m_TextLineHeightInNormScreen = _LineHeihgtInNormScreen;
+	m_TextureToScreenRatio = _TextureToScreenRatio;
 
 	// Create and upload cube geometry resources to the GPU.
 	auto d3dDevice = _DeviceResources->GetD3DDevice();
@@ -62,21 +64,15 @@ void TextField::Update()
 
 
 
-void TextField::AddCharacter(UINT _Pos, Character _Char)
+void TextField::AddCharacter(UINT _IdxInString, CharGlyphInTexture _GlyphInTexture)
 {
-	//DirectX::XMFLOAT2 curPos = GetCaretPosByIndex(_Pos);
+	Character c;
+	c.m_GlyphInTexture = _GlyphInTexture;
+	// do not set position, it is set in "RePositionCharacters"
 
-	//if (curPos.x + (m_IntercharacterSpace + _Char.m_Geom.m_Size.x) > 0)	// text field width reached, move to the next line
-	//{
-	//	curPos.x = m_LeftTextfieldSide;
-	//	curPos.y -= m_CharacterRowHeight;
-	//}
+	m_TextfieldRectangles.insert(m_TextfieldRectangles.begin() +_IdxInString, c);
 
-	//_Char.m_Geom.m_Pos = curPos;	// HACK: fix position keeping size and texture "as is"
-
-	m_TextfieldRectangles.insert(m_TextfieldRectangles.begin() +_Pos, _Char);
-
-	RePositionCharacters(_Pos);
+	RePositionCharacters(_IdxInString);
 }
 
 
@@ -94,35 +90,37 @@ void TextField::DeleteCharacter(UINT _Pos)
 
 
 
-void TextField::RePositionCharacters(UINT _StartPos)
+void TextField::RePositionCharacters(UINT /*_StartPos*/)
 {
 //	DirectX::XMFLOAT2 nextPos = _StartPos > 0 ? m_TextfieldRectangles[_StartPos - 1].m_Geom.m_Pos : m_BeginCaretPos;	// start from top left
-	DirectX::XMFLOAT2 nextPos = DirectX::XMFLOAT2(m_BeginCaretPos.x, m_BeginCaretPos.y - m_BaselineCoeff);	// start from top left
+	DirectX::XMFLOAT2 nextPos = DirectX::XMFLOAT2(m_BeginCaretPos.x, m_BeginCaretPos.y - m_TextLineHeightInNormScreen * m_BaseLineRatio);	// start from top left
+
+	float interCharNorm = m_IntercharacterSpace * m_TextLineHeightInNormScreen;
 
 	for (UINT i = /*_StartPos > 0 ? _StartPos-1 : */0, ei = GetNumberOfChars(); i < ei; ++i)
 	{
 		DirectX::XMFLOAT2 pos = nextPos;
 
 		Character curChar = m_TextfieldRectangles[i];
-		float w = curChar.m_Geom.m_Size.x;
-		float h = curChar.m_Geom.m_Size.y;
+		float w = curChar.m_GlyphInTexture.m_Texture.m_Size.x * m_TextureToScreenRatio * m_TextLineHeightInNormScreen * m_FontAspectRatio;
+		float h = curChar.m_GlyphInTexture.m_Texture.m_Size.y * m_TextureToScreenRatio * m_TextLineHeightInNormScreen;
 
-		nextPos.x += (m_IntercharacterSpace + w);
+		nextPos.x += (interCharNorm + w);
 
 		if (nextPos.x > 0)	// text field width reached, move to the next line
 		{
 			nextPos.x = m_BeginCaretPos.x;
-			nextPos.y -= m_CharacterRowHeight;
+			nextPos.y -= m_TextLineHeightInNormScreen * m_CharacterRowHeight;
 
 			pos = nextPos;
 
-			nextPos.x += (m_IntercharacterSpace + w);
+			nextPos.x += (interCharNorm + w);
 		}
 
 		// baseline
-		pos.y += m_BaselineCoeff * curChar.m_Baseline;	// move up from baseline
+		pos.y += m_TextLineHeightInNormScreen * curChar.m_GlyphInTexture.m_Baseline;	// move up from baseline
 
-		m_TextfieldRectangles[i].m_Geom.m_Pos = pos;
+		m_TextfieldRectangles[i].m_Geom = Rectangle(pos, DirectX::XMFLOAT2(w,h));
 
 	}
 
@@ -140,28 +138,30 @@ void TextField::MapToVertices()
 
 	for (int i = 0, ei = GetNumberOfChars(); i < ei; ++i)
 	{
-		Character &rect = m_TextfieldRectangles[i];
+		Character &chr = m_TextfieldRectangles[i];
 
-		float dx = rect.m_Geom.m_Pos.x + rect.m_Geom.m_Size.x;
-		float dy = rect.m_Geom.m_Pos.y - rect.m_Geom.m_Size.y;
+		float dx = chr.m_Geom.m_Pos.x + chr.m_Geom.m_Size.x;
+		float dy = chr.m_Geom.m_Pos.y - chr.m_Geom.m_Size.y;
 
-		*vertices = { DirectX::XMFLOAT3(rect.m_Geom.m_Pos.x, rect.m_Geom.m_Pos.y, 0.0f), DirectX::XMFLOAT2(rect.m_Texture.m_Pos.x, rect.m_Texture.m_Pos.y) };
+		const Rectangle &glyphTex = chr.m_GlyphInTexture.m_Texture;
+
+		*vertices = { DirectX::XMFLOAT3(chr.m_Geom.m_Pos.x, chr.m_Geom.m_Pos.y, 0.0f), DirectX::XMFLOAT2(glyphTex.m_Pos.x, glyphTex.m_Pos.y) };
 		++vertices;
-		*vertices = { DirectX::XMFLOAT3(dx, rect.m_Geom.m_Pos.y, 0.0f), DirectX::XMFLOAT2(rect.m_Texture.m_Pos.x + rect.m_Texture.m_Size.x, rect.m_Texture.m_Pos.y) };
+		*vertices = { DirectX::XMFLOAT3(dx, chr.m_Geom.m_Pos.y, 0.0f), DirectX::XMFLOAT2(glyphTex.m_Pos.x + glyphTex.m_Size.x, glyphTex.m_Pos.y) };
 		++vertices;
-		*vertices = { DirectX::XMFLOAT3(rect.m_Geom.m_Pos.x, dy, 0.0f), DirectX::XMFLOAT2(rect.m_Texture.m_Pos.x, rect.m_Texture.m_Pos.y + rect.m_Texture.m_Size.y) };
+		*vertices = { DirectX::XMFLOAT3(chr.m_Geom.m_Pos.x, dy, 0.0f), DirectX::XMFLOAT2(glyphTex.m_Pos.x, glyphTex.m_Pos.y + glyphTex.m_Size.y) };
 		++vertices;
-		*vertices = { DirectX::XMFLOAT3(dx, dy, 0.0f), DirectX::XMFLOAT2(rect.m_Texture.m_Pos.x + rect.m_Texture.m_Size.x, rect.m_Texture.m_Pos.y + rect.m_Texture.m_Size.y) };
+		*vertices = { DirectX::XMFLOAT3(dx, dy, 0.0f), DirectX::XMFLOAT2(glyphTex.m_Pos.x + glyphTex.m_Size.x, glyphTex.m_Pos.y + glyphTex.m_Size.y) };
 		++vertices;
 
 		if (i < ei - 1)	// add gap like 2 empty triangles
 		{
 			// previous
-			*vertices = { DirectX::XMFLOAT3(dx, dy, 0.0f), DirectX::XMFLOAT2(rect.m_Texture.m_Pos.x + rect.m_Texture.m_Size.x, rect.m_Texture.m_Pos.y + rect.m_Texture.m_Size.y) };
+			*vertices = { DirectX::XMFLOAT3(dx, dy, 0.0f), DirectX::XMFLOAT2(glyphTex.m_Pos.x + glyphTex.m_Size.x, glyphTex.m_Pos.y + glyphTex.m_Size.y) };
 			++vertices;
 			// next
 			Character &rectNext = m_TextfieldRectangles[i+1];
-			*vertices = { DirectX::XMFLOAT3(rectNext.m_Geom.m_Pos.x, rectNext.m_Geom.m_Pos.y, 0.0f), DirectX::XMFLOAT2(rectNext.m_Texture.m_Pos.x, rectNext.m_Texture.m_Pos.y) };
+			*vertices = { DirectX::XMFLOAT3(rectNext.m_Geom.m_Pos.x, rectNext.m_Geom.m_Pos.y, 0.0f), DirectX::XMFLOAT2(rectNext.m_GlyphInTexture.m_Texture.m_Pos.x, rectNext.m_GlyphInTexture.m_Texture.m_Pos.y) };
 			++vertices;
 		}
 	}
@@ -177,18 +177,20 @@ DirectX::XMFLOAT2 TextField::GetCaretPosByIndex(UINT _pos)
 {
 	DirectX::XMFLOAT2 curPos = m_BeginCaretPos;	// start from top left corner
 
+	float interCharNorm = m_IntercharacterSpace * m_TextLineHeightInNormScreen;
+
 	for (UINT i = 0, ei = _pos; i < ei; ++i)
 	{
 		Character curChar = m_TextfieldRectangles[i];
 		float w = curChar.m_Geom.m_Size.x;
 		float h = curChar.m_Geom.m_Size.y;
 
-		curPos.x += (m_IntercharacterSpace + w);
+		curPos.x += (interCharNorm + w);
 
 		if (curPos.x > 0)	// text field width reached, move to the next line
 		{
-			curPos.x = m_BeginCaretPos.x + (m_IntercharacterSpace + w);
-			curPos.y -= m_CharacterRowHeight;
+			curPos.x = m_BeginCaretPos.x + (interCharNorm + w);
+			curPos.y -= m_TextLineHeightInNormScreen * m_CharacterRowHeight;
 		}
 	}
 
@@ -199,10 +201,10 @@ DirectX::XMFLOAT2 TextField::GetCaretPosByIndex(UINT _pos)
 		float w = curChar.m_Geom.m_Size.x;
 		float h = curChar.m_Geom.m_Size.y;
 
-		if (curPos.x + (m_IntercharacterSpace + w) > 0)	// text field width reached, move to the next line
+		if (curPos.x + (interCharNorm + w) > 0)	// text field width reached, move to the next line
 		{
 			curPos.x = m_BeginCaretPos.x;
-			curPos.y -= m_CharacterRowHeight;
+			curPos.y -= m_TextLineHeightInNormScreen * m_CharacterRowHeight;
 		}
 	}
 

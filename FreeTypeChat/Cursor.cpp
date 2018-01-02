@@ -207,7 +207,7 @@ void Cursor::InitializeCursor(const std::shared_ptr<DX::DeviceResources>& _Devic
 
 
 
-void Cursor::Update(double _CurrentTimestamp, DirectX::XMFLOAT2 _pos)
+void Cursor::UpdateCursor(double _CurrentTimestamp, DirectX::XMFLOAT2 _pos)
 {
 	m_CursorVertices[0] = { XMFLOAT3(_pos.x , _pos.y, 0.0f), XMFLOAT2(0.0f, 0.0f) };
 	m_CursorVertices[1] = { XMFLOAT3(_pos.x + m_CursorNormalizedSize.x , _pos.y, 0.0f), XMFLOAT2(1.0f, 0.0f) };

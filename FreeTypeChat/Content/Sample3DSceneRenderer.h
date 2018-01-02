@@ -81,6 +81,9 @@ namespace FreeTypeChat
 		Cursor		m_Cursor;
 		TextField	m_TextField;
 		CharCache m_CharCache;
+
+		const float m_TextLinwHeightInNormScreen = 0.104f;		// line height in norm screen coords [-1..1]
+		const UINT m_FontSize = 48;								// font size to render with FreeType
 	};
 }
 
