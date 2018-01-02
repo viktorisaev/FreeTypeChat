@@ -46,107 +46,150 @@ void FreeTypeChatMain::Update()
 		// consume one input queue item
 		if (m_InputQueue.size() > 0)
 		{
-			std::lock_guard<std::mutex> locker_inputqueue(m_InputQueueMutex);	// auto-unlock on block quit
-			KeyPressed key = m_InputQueue.front();
-
-			if (key.m_VirtualKey == Windows::System::VirtualKey::None)
+			bool hasKeyToProcess = false;	// flag to pop the queue and process "key"
+			KeyPressed key;
 			{
-				// character typed
-				m_InputQueue.pop();	// TODO: do not pop if not in cache
+				std::lock_guard<std::mutex> locker_inputqueue(m_InputQueueMutex);	// auto-unlock on block quit
+				key = m_InputQueue.front();
 
-				GlyphInTexture glyph;
-				if (key.m_CharCode != ' ')	// [SPACE]
+				if (key.m_VirtualKey == Windows::System::VirtualKey::None)
 				{
-					if (!m_sceneRenderer->GetGlyph(key.m_CharCode, glyph))
+					GlyphInTexture glyph;
+					if (key.m_CharCode != ' ')	// [SPACE]
 					{
-						glyph = m_sceneRenderer->AddCharToCache(key.m_CharCode);	// TODO: do not wait on GPU main render
+						if (m_sceneRenderer->GetGlyph(key.m_CharCode, glyph))
+						{
+							hasKeyToProcess = true;		// glyph is in cache, can continue to render it to output string
+						}
+						else
+						{
+							// TODO: issue render glyph to texture
+							// now: render anyway in this thread
+							glyph = m_sceneRenderer->AddCharToCache(key.m_CharCode);	// TODO: do not wait on GPU main render
+							hasKeyToProcess = true;		// TODO: remove it later as render to cache would not be done yet, it is in different thread and will be consumed next update
+						}
+					}
+					else
+					{
+						hasKeyToProcess = true;	// space
 					}
 				}
 				else
 				{
-					glyph.m_TexCoord.m_Size.x = 0.02f;	// TODO: put space for [SPACE] here depends on font
-					glyph.m_TexCoord.m_Size.y = 0.0f;
+					hasKeyToProcess = true;		// cursor movement, always pass
 				}
-				// glyph = glyph for key.m_CharCode
 
-				m_sceneRenderer->GetCursor().ResetBlink(m_timer.GetTotalSeconds());
-
-				// type to textfield
-				float tx = glyph.m_TexCoord.m_Pos.x;
-				float ty = glyph.m_TexCoord.m_Pos.y;
-				float w = glyph.m_TexCoord.m_Size.x;
-				float h = glyph.m_TexCoord.m_Size.y;
-
-				Windows::Foundation::Size windowSize = m_sceneRenderer->GetOutputSize();
-				float aspectRatio = windowSize.Width / windowSize.Height;
-
-				CharGlyphInTexture c =
+				// check is key is consumed from the queue on this iteration of Update
+				if (hasKeyToProcess)
 				{
-					Rectangle(DirectX::XMFLOAT2(tx, ty), DirectX::XMFLOAT2(w, h)),
-					glyph.m_Baseline
-				};
+					// character typed
+					m_InputQueue.pop();	// TODO: do not pop if not in cache
+				}
 
-				m_sceneRenderer->GetTextfield().AddCharacter(m_CursorIndex, c);
+			}	// release locker_inputqueue
 
-				m_CursorIndex += 1;
-				curPos = m_sceneRenderer->GetTextfield().GetCaretPosByIndex(m_CursorIndex);	// refresh cursor. TODO: fix it
-			}
-			else
+
+			if (hasKeyToProcess)
 			{
-				// cursor movement
-				m_InputQueue.pop();
+				// key = key pressed
 
-				switch (key.m_VirtualKey)
+				if (key.m_VirtualKey == Windows::System::VirtualKey::None)
 				{
-				case Windows::System::VirtualKey::Left:
-					if (m_CursorIndex > 0)
-					{
-						// cursor step back
-						m_CursorIndex -= 1;
-						curPos = m_sceneRenderer->GetTextfield().GetCaretPosByIndex(m_CursorIndex);	// refresh cursor. TODO: fix it
-						m_sceneRenderer->GetCursor().ResetBlink(m_timer.GetTotalSeconds());
-					}
-					break;
-				case Windows::System::VirtualKey::Right:
-					if (m_CursorIndex < m_sceneRenderer->GetTextfield().GetNumberOfChars())
-					{
-						// cursor step forward
-						m_CursorIndex += 1;
-						curPos = m_sceneRenderer->GetTextfield().GetCaretPosByIndex(m_CursorIndex);	// refresh cursor. TODO: fix it
-						m_sceneRenderer->GetCursor().ResetBlink(m_timer.GetTotalSeconds());
-					}
-					break;
-				case Windows::System::VirtualKey::Back:
-					if (m_CursorIndex > 0)
-					{
-						m_CursorIndex -= 1;
-						m_sceneRenderer->GetTextfield().DeleteCharacter(m_CursorIndex);
-						curPos = m_sceneRenderer->GetTextfield().GetCaretPosByIndex(m_CursorIndex);	// refresh cursor. TODO: fix it
-						m_sceneRenderer->GetCursor().ResetBlink(m_timer.GetTotalSeconds());
-					}
-					break;
-				case Windows::System::VirtualKey::Delete:
-					if (m_CursorIndex < m_sceneRenderer->GetTextfield().GetNumberOfChars())
-					{
-						m_sceneRenderer->GetTextfield().DeleteCharacter(m_CursorIndex);
-						curPos = m_sceneRenderer->GetTextfield().GetCaretPosByIndex(m_CursorIndex);	// refresh cursor. TODO: fix it
-						m_sceneRenderer->GetCursor().ResetBlink(m_timer.GetTotalSeconds());
-					}
-					break;
-				case Windows::System::VirtualKey::Home:
-					m_CursorIndex = 0;
-					curPos = m_sceneRenderer->GetTextfield().GetCaretPosByIndex(m_CursorIndex);	// refresh cursor. TODO: fix it
-					m_sceneRenderer->GetCursor().ResetBlink(m_timer.GetTotalSeconds());
-					break;
-				case Windows::System::VirtualKey::End:
-					m_CursorIndex = m_sceneRenderer->GetTextfield().GetNumberOfChars();
-					curPos = m_sceneRenderer->GetTextfield().GetCaretPosByIndex(m_CursorIndex);	// refresh cursor. TODO: fix it
-					m_sceneRenderer->GetCursor().ResetBlink(m_timer.GetTotalSeconds());
-					break;
-				}
-			}
 
-		}
+					GlyphInTexture glyph;
+					if (key.m_CharCode != ' ')	// [SPACE]
+					{
+						if (!m_sceneRenderer->GetGlyph(key.m_CharCode, glyph))
+						{
+							// ERROR! should be there as hasKeyToProcess passed
+						}
+					}
+					else
+					{
+						glyph.m_TexCoord.m_Size.x = 0.02f;	// TODO: put space for [SPACE] here depends on font
+						glyph.m_TexCoord.m_Size.y = 0.0f;
+					}
+					// here glyph = glyph for key.m_CharCode
+
+					m_sceneRenderer->GetCursor().ResetBlink(m_timer.GetTotalSeconds());
+
+					// type to textfield
+					float tx = glyph.m_TexCoord.m_Pos.x;
+					float ty = glyph.m_TexCoord.m_Pos.y;
+					float w = glyph.m_TexCoord.m_Size.x;
+					float h = glyph.m_TexCoord.m_Size.y;
+
+					Windows::Foundation::Size windowSize = m_sceneRenderer->GetOutputSize();
+					float aspectRatio = windowSize.Width / windowSize.Height;
+
+					CharGlyphInTexture c =
+					{
+						Rectangle(DirectX::XMFLOAT2(tx, ty), DirectX::XMFLOAT2(w, h)),
+						glyph.m_Baseline
+					};
+
+					m_sceneRenderer->GetTextfield().AddCharacter(m_CursorIndex, c);
+
+					m_CursorIndex += 1;
+					curPos = m_sceneRenderer->GetTextfield().GetCaretPosByIndex(m_CursorIndex);	// refresh cursor. TODO: fix it
+				}
+				else
+				{
+					// cursor movement
+					m_InputQueue.pop();
+
+					switch (key.m_VirtualKey)
+					{
+					case Windows::System::VirtualKey::Left:
+						if (m_CursorIndex > 0)
+						{
+							// cursor step back
+							m_CursorIndex -= 1;
+							curPos = m_sceneRenderer->GetTextfield().GetCaretPosByIndex(m_CursorIndex);	// refresh cursor. TODO: fix it
+							m_sceneRenderer->GetCursor().ResetBlink(m_timer.GetTotalSeconds());
+						}
+						break;
+					case Windows::System::VirtualKey::Right:
+						if (m_CursorIndex < m_sceneRenderer->GetTextfield().GetNumberOfChars())
+						{
+							// cursor step forward
+							m_CursorIndex += 1;
+							curPos = m_sceneRenderer->GetTextfield().GetCaretPosByIndex(m_CursorIndex);	// refresh cursor. TODO: fix it
+							m_sceneRenderer->GetCursor().ResetBlink(m_timer.GetTotalSeconds());
+						}
+						break;
+					case Windows::System::VirtualKey::Back:
+						if (m_CursorIndex > 0)
+						{
+							m_CursorIndex -= 1;
+							m_sceneRenderer->GetTextfield().DeleteCharacter(m_CursorIndex);
+							curPos = m_sceneRenderer->GetTextfield().GetCaretPosByIndex(m_CursorIndex);	// refresh cursor. TODO: fix it
+							m_sceneRenderer->GetCursor().ResetBlink(m_timer.GetTotalSeconds());
+						}
+						break;
+					case Windows::System::VirtualKey::Delete:
+						if (m_CursorIndex < m_sceneRenderer->GetTextfield().GetNumberOfChars())
+						{
+							m_sceneRenderer->GetTextfield().DeleteCharacter(m_CursorIndex);
+							curPos = m_sceneRenderer->GetTextfield().GetCaretPosByIndex(m_CursorIndex);	// refresh cursor. TODO: fix it
+							m_sceneRenderer->GetCursor().ResetBlink(m_timer.GetTotalSeconds());
+						}
+						break;
+					case Windows::System::VirtualKey::Home:
+						m_CursorIndex = 0;
+						curPos = m_sceneRenderer->GetTextfield().GetCaretPosByIndex(m_CursorIndex);	// refresh cursor. TODO: fix it
+						m_sceneRenderer->GetCursor().ResetBlink(m_timer.GetTotalSeconds());
+						break;
+					case Windows::System::VirtualKey::End:
+						m_CursorIndex = m_sceneRenderer->GetTextfield().GetNumberOfChars();
+						curPos = m_sceneRenderer->GetTextfield().GetCaretPosByIndex(m_CursorIndex);	// refresh cursor. TODO: fix it
+						m_sceneRenderer->GetCursor().ResetBlink(m_timer.GetTotalSeconds());
+						break;
+					}
+				}
+			}	// if (hasKeyToProcess)
+
+		}	// if (m_InputQueue.size() > 0)
 
 		m_sceneRenderer->GetCursor().UpdateCursor(m_timer.GetTotalSeconds(), DirectX::XMFLOAT2(curPos.x, curPos.y));
 
