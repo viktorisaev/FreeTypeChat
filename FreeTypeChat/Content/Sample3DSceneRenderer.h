@@ -23,7 +23,7 @@ namespace FreeTypeChat
 		void CreateDeviceDependentResources();
 		void CreateWindowSizeDependentResources();
 		void Update(DX::StepTimer const& timer);
-		GlyphInTexture AddCharToCache(UINT charCode);
+		void AddCharToCache(UINT charCode);
 		bool Render();
 		void SaveState();
 

@@ -423,15 +423,12 @@ bool Sample3DSceneRenderer::GetGlyph(UINT _CharCode, GlyphInTexture & _Glyph)
 
 
 
-// TODO: add char to output
-GlyphInTexture Sample3DSceneRenderer::AddCharToCache(UINT _CharCode)
+void Sample3DSceneRenderer::AddCharToCache(UINT _CharCode)
 {
 	if (m_loadingComplete)
 	{
-		return m_CharCache.UpdateTexture(_CharCode);
+		m_CharCache.UpdateTexture(_CharCode);
 	}
-	
-	return GlyphInTexture();
 }
 
 

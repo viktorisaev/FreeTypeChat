@@ -1,5 +1,8 @@
 ﻿#pragma once
 
+#include <deque>
+#include <queue>
+
 #include "Common/DeviceResources.h"
 #include "Content/ShaderStructures.h"
 #include "FreeTypeRender.h"
@@ -54,7 +57,7 @@ namespace FreeTypeChat
 		Concurrency::task<void> LoadCharCacheResources();
 		void Initialize(ID3D12Device* _d3dDevice, ID3D12DescriptorHeap *_TexHeap, int _CharCacheTextureDescriptorIndex, UINT _FontSize);
 //		void CreateWindowSizeDependentResources();
-		GlyphInTexture UpdateTexture(UINT charCode);
+		void UpdateTexture(UINT charCode);
 
 		bool GetGlyph(UINT charCode, GlyphInTexture& _Glyph);
 
@@ -63,6 +66,8 @@ namespace FreeTypeChat
 
 	private:	// func
 		void WaitForGpu();
+
+		void RenredingGlyphThread();
 
 	private:	// data
 
@@ -91,6 +96,16 @@ namespace FreeTypeChat
 		std::vector<GlyphInTexture> m_FreeTypeCacheVector;				// current characters cache (all used characters)
 
 		float m_FontSize;	// set during initialization
+
+		// render glyph queue
+		std::mutex m_RenderGlyphQueueMutex;		// resource access: writing on input, reading in rendering thread
+		std::queue<UINT, std::deque<UINT>> m_RenderGlyphQueue;	// queue from input to render glyph and push to cache
+
+		std::mutex m_RenderGlyphThreadMutex;		// mutex to work with g_RenderGlyphConditionalVariable
+		std::condition_variable g_RenderGlyphConditionalVariable;	// notified when char added to the render glyph queue
+
+		std::thread m_RenderThread;
+
 	};
 }
 

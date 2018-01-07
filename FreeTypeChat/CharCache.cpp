@@ -131,6 +131,9 @@ void CharCache::Initialize(ID3D12Device* _d3dDevice, ID3D12DescriptorHeap *_TexH
 	m_CharCacheCommandQueue.Get()->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
 	WaitForGpu();	// wait for the texture transfer to complete
+
+	// run rendering thread
+	m_RenderThread = std::thread(&CharCache::RenredingGlyphThread, this);
 }
 
 
@@ -141,159 +144,182 @@ void CharCache::Initialize(ID3D12Device* _d3dDevice, ID3D12DescriptorHeap *_TexH
 
 
 // TODO: do not wait GPU on main render
-GlyphInTexture CharCache::UpdateTexture(UINT charCode)
+void CharCache::UpdateTexture(UINT charCode)
 {
+	bool isNotify = false;
+	{	// add key to glyph render queue (unique)
+		std::lock_guard<std::mutex> locker_cache(m_RenderGlyphQueueMutex);	// mutex access with "RenredingGlyphThread"
 
-	// check if glyph already there
-	std::vector<GlyphInTexture>::const_iterator ut = m_FreeTypeCacheVector.end();
-	{
-//		std::lock_guard<std::mutex> locker_cache(m_FreeTypeCacheMutex);		// we are the only writers to the cache, so reading could be without lock. Check lock on writing below.
-
-		GlyphInTexture curGlyph(charCode);
-
-		ut = std::lower_bound(m_FreeTypeCacheVector.begin(), m_FreeTypeCacheVector.end(), curGlyph);
-
-		if (ut != m_FreeTypeCacheVector.end())
+		auto itFind = std::find(m_RenderGlyphQueue._Get_container().begin(), m_RenderGlyphQueue._Get_container().end(), charCode);
+		if (itFind == m_RenderGlyphQueue._Get_container().end())
 		{
-			if (ut->m_CharCode == charCode)
-			{
-				return GlyphInTexture();
-			}
+			// there is no render request in the queue for the same charCode, so add in (should be unique)
+			m_RenderGlyphQueue.push(charCode);
+			isNotify = true;
 		}
-	}
+		else
+		{
+			// char render request is in the queue
+			int i = 1;
+		}
+	}	// release m_RenderGlyphQueueMutex
 
-
-
-	m_FreeTypeRender.CreateGlyphBitmap(charCode);
-
-	std::pair<int, int> bitmapSize = m_FreeTypeRender.GetBitmapSize();
-	std::pair<int, int> bitmapOffset = m_FreeTypeRender.GetBitmapTopLeft();
-
-	int w = bitmapSize.first;// 20 + (rand() * 50) / (RAND_MAX + 1);
-	int h = bitmapSize.second;// 20 + (rand() * 50) / (RAND_MAX + 1);
-
-	DirectX::XMINT2 nextPos = DirectX::XMINT2(m_NextGlyphPos.x + w, m_NextGlyphPos.y);
-
-	if (nextPos.x > m_FontTextureSize.x)
+	// notify rendering thread when queue is unlocked
+	if (isNotify)
 	{
-		// new line
-		nextPos.x = 0;
-		nextPos.y += (int32_t)m_FontSize;
+		g_RenderGlyphConditionalVariable.notify_all();	// notify rendering thread to start rendering
+	}
+}
+
+
+
+
+void CharCache::RenredingGlyphThread()
+{
+	while (true)	// TODO: quit thread at exit (?)
+	{
+		// wait for rendering request
+		std::unique_lock<std::mutex> lk(m_RenderGlyphThreadMutex);
+		g_RenderGlyphConditionalVariable.wait(lk, [this] { return /*g_Quit || */!m_RenderGlyphQueue.empty(); });
+//		lk.unlock();
+
+		// do not check if glyph already there
+
+		UINT charCode = 0;
+		// pop the next charCode from rendering queue
+		{
+			std::lock_guard<std::mutex> locker_cache(m_RenderGlyphQueueMutex);	// mutex access with "UpdateTexture"
+
+			charCode = m_RenderGlyphQueue.front();
+			m_RenderGlyphQueue.pop();
+		}
+
+		assert(charCode != 0);
+		m_FreeTypeRender.CreateGlyphBitmap(charCode);
+
+		std::pair<int, int> bitmapSize = m_FreeTypeRender.GetBitmapSize();
+		std::pair<int, int> bitmapOffset = m_FreeTypeRender.GetBitmapTopLeft();
+
+		int w = bitmapSize.first;// 20 + (rand() * 50) / (RAND_MAX + 1);
+		int h = bitmapSize.second;// 20 + (rand() * 50) / (RAND_MAX + 1);
+
+		DirectX::XMINT2 nextPos = DirectX::XMINT2(m_NextGlyphPos.x + w, m_NextGlyphPos.y);
+
+		if (nextPos.x > m_FontTextureSize.x)
+		{
+			// new line
+			nextPos.x = 0;
+			nextPos.y += (int32_t)m_FontSize;
+
+			m_NextGlyphPos = nextPos;
+
+			nextPos.x += w;	// at least one glyph should have space in one row
+		}
+
+		if (m_NextGlyphPos.y + h > m_FontTextureSize.y)
+		{
+			int i = 1;
+			// TODO: out of vertical texture size. Add texture?
+		}
+
+		int x = m_NextGlyphPos.x;
+		int y = m_NextGlyphPos.y;
 
 		m_NextGlyphPos = nextPos;
 
-		nextPos.x += w;	// at least one glyph should have space in one row
-	}
 
-	if (m_NextGlyphPos.y + h > m_FontTextureSize.y)
-	{
-		return GlyphInTexture();	// TODO: out of vertical texture size. Add texture?
-	}
+		// update texture
+		DX::ThrowIfFailed(m_CharCacheCommandList->Reset(m_CharCacheCommandAllocator.Get(), nullptr));
 
-	int x = m_NextGlyphPos.x;
-	int y = m_NextGlyphPos.y;
+		D3D12_BOX box = {};
+		box.left = x;
+		box.top = y;
+		box.front = 0;
 
-	m_NextGlyphPos = nextPos;
-
-
-	// update texture
-	DX::ThrowIfFailed(m_CharCacheCommandList->Reset(m_CharCacheCommandAllocator.Get(), nullptr));
-
-	D3D12_BOX box = {};
-	box.left = x;
-	box.top = y;
-	box.front = 0;
-
-	box.right = x + w;
-	box.bottom = y + h;
-	box.back = 1;
+		box.right = x + w;
+		box.bottom = y + h;
+		box.back = 1;
 
 
-	D3D12_TEXTURE_COPY_LOCATION copyLocation = {};
-	copyLocation.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-	copyLocation.SubresourceIndex = 0;
-	copyLocation.pResource = m_CharCacheTexture.Get();
+		D3D12_TEXTURE_COPY_LOCATION copyLocation = {};
+		copyLocation.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+		copyLocation.SubresourceIndex = 0;
+		copyLocation.pResource = m_CharCacheTexture.Get();
 
-	D3D12_TEXTURE_COPY_LOCATION srcLocation = {};
-	srcLocation.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
-	srcLocation.PlacedFootprint.Footprint.Width = m_FontTextureSize.x;
-	srcLocation.PlacedFootprint.Footprint.Height = m_FontTextureSize.y;
-	srcLocation.PlacedFootprint.Footprint.Depth = 1;
-	srcLocation.PlacedFootprint.Footprint.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	srcLocation.PlacedFootprint.Footprint.RowPitch = srcLocation.PlacedFootprint.Footprint.Width * 4;
-	srcLocation.PlacedFootprint.Offset = 0;
-	srcLocation.pResource = m_CharCacheUploadHeap.Get();
+		D3D12_TEXTURE_COPY_LOCATION srcLocation = {};
+		srcLocation.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+		srcLocation.PlacedFootprint.Footprint.Width = m_FontTextureSize.x;
+		srcLocation.PlacedFootprint.Footprint.Height = m_FontTextureSize.y;
+		srcLocation.PlacedFootprint.Footprint.Depth = 1;
+		srcLocation.PlacedFootprint.Footprint.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		srcLocation.PlacedFootprint.Footprint.RowPitch = srcLocation.PlacedFootprint.Footprint.Width * 4;
+		srcLocation.PlacedFootprint.Offset = 0;
+		srcLocation.pResource = m_CharCacheUploadHeap.Get();
 
-	BYTE* pData;
-	DX::ThrowIfFailed(m_CharCacheUploadHeap->Map(0, NULL, reinterpret_cast<void**>(&pData)));
+		BYTE* pData;
+		DX::ThrowIfFailed(m_CharCacheUploadHeap->Map(0, NULL, reinterpret_cast<void**>(&pData)));
 
-	byte *glyph = m_FreeTypeRender.GetBitmap();
+		byte *glyph = m_FreeTypeRender.GetBitmap();
 
-	byte valr = 0xFF;
+		byte valr = 0xFF;
 
-	for (int i = 0, ei = h; i < ei; ++i)
-	{
-		for (int j = 0, ej = w; j < ej; ++j)
+		for (int i = 0, ei = h; i < ei; ++i)
 		{
-			pData[((y+i) * m_FontTextureSize.x + x+j) * 4 + 0] = valr;
-			pData[((y+i) * m_FontTextureSize.x + x+j) * 4 + 1] = valr;
-			pData[((y+i) * m_FontTextureSize.x + x+j) * 4 + 2] = valr;
-			pData[((y+i) * m_FontTextureSize.x + x+j) * 4 + 3] = glyph[i*w+j];
+			for (int j = 0, ej = w; j < ej; ++j)
+			{
+				pData[((y + i) * m_FontTextureSize.x + x + j) * 4 + 0] = valr;
+				pData[((y + i) * m_FontTextureSize.x + x + j) * 4 + 1] = valr;
+				pData[((y + i) * m_FontTextureSize.x + x + j) * 4 + 2] = valr;
+				pData[((y + i) * m_FontTextureSize.x + x + j) * 4 + 3] = glyph[i*w + j];
+			}
 		}
+
+		m_CharCacheUploadHeap->Unmap(0, NULL);
+
+		PIXBeginEvent(m_CharCacheCommandList.Get(), 0, L"UpdateTexture");
+
+		m_CharCacheCommandList.Get()->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_CharCacheTexture.Get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_COPY_DEST));
+
+		m_CharCacheCommandList.Get()->CopyTextureRegion(&copyLocation, x, y, 0, &srcLocation, &box);
+
+		m_CharCacheCommandList.Get()->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_CharCacheTexture.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
+		PIXEndEvent(m_CharCacheCommandList.Get());	// UpdateTexture
+
+
+		DX::ThrowIfFailed(m_CharCacheCommandList.Get()->Close());
+		ID3D12CommandList* ppCommandLists[] = { m_CharCacheCommandList.Get() };
+		m_CharCacheCommandQueue.Get()->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
+
+		WaitForGpu();	// wait for the texture transfer to complete
+
+
+		// find a position for the new glyph
+		std::vector<GlyphInTexture>::const_iterator ut = m_FreeTypeCacheVector.end();
+		{
+			//	std::lock_guard<std::mutex> locker_cache(m_FreeTypeCacheMutex);		// we are the only writer to the cache, so reading could be performed without the lock. Check lock on writing below.
+
+			GlyphInTexture curGlyph(charCode);
+
+			ut = std::lower_bound(m_FreeTypeCacheVector.begin(), m_FreeTypeCacheVector.end(), curGlyph);
+
+			if (ut != m_FreeTypeCacheVector.end())
+			{
+				assert(ut->m_CharCode != charCode);		// the glyph shouldn't be there yet!
+			}
+		}
+
+		// add item to cache
+		{
+			std::lock_guard<std::mutex> locker_cache(m_FreeTypeCacheMutex);
+
+			Rectangle texCoord(DirectX::XMFLOAT2((float)x / (float)m_FontTextureSize.x, (float)y / (float)m_FontTextureSize.y), DirectX::XMFLOAT2((float)w / (float)m_FontTextureSize.x, (float)h / (float)m_FontTextureSize.y));
+
+			GlyphInTexture curGlyph(charCode, texCoord, bitmapOffset.first / m_FontSize);	// TODO: use font parameters here
+
+			m_FreeTypeCacheVector.insert(ut, curGlyph);		// insert the new glyph to the cache
+		}	// mem release semantic
 	}
-
-	m_CharCacheUploadHeap->Unmap(0, NULL);
-
-	PIXBeginEvent(m_CharCacheCommandList.Get(), 0, L"UpdateTexture");
-
-	m_CharCacheCommandList.Get()->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_CharCacheTexture.Get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_COPY_DEST));
-
-	m_CharCacheCommandList.Get()->CopyTextureRegion(&copyLocation, x, y, 0, &srcLocation, &box);
-
-	m_CharCacheCommandList.Get()->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_CharCacheTexture.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
-	PIXEndEvent(m_CharCacheCommandList.Get());	// UpdateTexture
-
-
-	DX::ThrowIfFailed(m_CharCacheCommandList.Get()->Close());
-	ID3D12CommandList* ppCommandLists[] = { m_CharCacheCommandList.Get() };
-	m_CharCacheCommandQueue.Get()->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
-
-	WaitForGpu();	// wait for the texture transfer to complete
-
-	// add item to cache
-	{
-		std::lock_guard<std::mutex> locker_cache(m_FreeTypeCacheMutex);
-
-		Rectangle texCoord(DirectX::XMFLOAT2((float)x / (float)m_FontTextureSize.x, (float)y / (float)m_FontTextureSize.y), DirectX::XMFLOAT2((float)w / (float)m_FontTextureSize.x, (float)h / (float)m_FontTextureSize.y));
-
-		GlyphInTexture curGlyph(charCode, texCoord, bitmapOffset.first / m_FontSize);	// TODO: use font parameters here
-
-		m_FreeTypeCacheVector.insert(ut, curGlyph);
-
-		return curGlyph;
-	}	// mem release semantic
-
 }
-
-
-
-
-
-// Wait for pending GPU work to complete.
-void CharCache::WaitForGpu()
-{
-	// Schedule a Signal command in the queue.
-	DX::ThrowIfFailed(m_CharCacheCommandQueue.Get()->Signal(m_CharCacheFence.Get(), m_CharCacheFenceValue));
-
-	// Wait until the fence has been crossed.
-	DX::ThrowIfFailed(m_CharCacheFence->SetEventOnCompletion(m_CharCacheFenceValue, m_CharCacheFenceEvent));
-	WaitForSingleObjectEx(m_CharCacheFenceEvent, INFINITE, FALSE);
-
-	// Increment the fence value for the current frame.
-	m_CharCacheFenceValue++;
-}
-
-
 
 
 
@@ -329,3 +355,22 @@ DirectX::XMINT2 CharCache::GetFontTextureSize()
 {
 	return m_FontTextureSize;
 }
+
+
+
+
+// Wait for pending GPU work to complete.
+void CharCache::WaitForGpu()
+{
+	// Schedule a Signal command in the queue.
+	DX::ThrowIfFailed(m_CharCacheCommandQueue.Get()->Signal(m_CharCacheFence.Get(), m_CharCacheFenceValue));
+
+	// Wait until the fence has been crossed.
+	DX::ThrowIfFailed(m_CharCacheFence->SetEventOnCompletion(m_CharCacheFenceValue, m_CharCacheFenceEvent));
+	WaitForSingleObjectEx(m_CharCacheFenceEvent, INFINITE, FALSE);
+
+	// Increment the fence value for the current frame.
+	m_CharCacheFenceValue++;
+}
+
+

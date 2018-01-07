@@ -57,16 +57,15 @@ void FreeTypeChatMain::Update()
 					GlyphInTexture glyph;
 					if (key.m_CharCode != ' ')	// [SPACE]
 					{
-						if (m_sceneRenderer->GetGlyph(key.m_CharCode, glyph))
+						if (m_sceneRenderer->GetGlyph(key.m_CharCode, glyph))	// mutex synched
 						{
 							hasKeyToProcess = true;		// glyph is in cache, can continue to render it to output string
 						}
 						else
 						{
-							// TODO: issue render glyph to texture
-							// now: render anyway in this thread
-							glyph = m_sceneRenderer->AddCharToCache(key.m_CharCode);	// TODO: do not wait on GPU main render
-							hasKeyToProcess = true;		// TODO: remove it later as render to cache would not be done yet, it is in different thread and will be consumed next update
+							// issue render glyph to texture. TODO: it is performed every frame until the glyph is found (?)
+							m_sceneRenderer->AddCharToCache(key.m_CharCode);	// mutex synched
+							hasKeyToProcess = false;		// keep the key in the InputQueue until it gets glyph
 						}
 					}
 					else
@@ -136,8 +135,6 @@ void FreeTypeChatMain::Update()
 				else
 				{
 					// cursor movement
-					m_InputQueue.pop();
-
 					switch (key.m_VirtualKey)
 					{
 					case Windows::System::VirtualKey::Left:
